@@ -7,8 +7,10 @@ logs/
 *.log
 
 # Credentials
-src/config/credentials/
-**/credentials/
+src/config/credentials/*
+!src/config/credentials/README.md
+**/credentials/*
+!**/credentials/README.md
 
 # Build files
 dist/
