@@ -1108,9 +1108,6 @@ export const validateSectionContent = (type: SectionType, content: any): Validat
 			case SectionType.CONTENT:
 				schema = mediaSectionSchema
 				break
-			case SectionType.PROGRESS:
-				schema = progressSectionSchema
-				break
 			case SectionType.TIMELINE:
 				schema = timelineSectionSchema
 				break
@@ -1207,7 +1204,6 @@ export const isSectionContent = (type: SectionType, content: any): boolean => {
 // Section content type definitions
 export type BaseSectionContent = z.infer<typeof baseSectionSchema>
 export type MediaSectionContent = z.infer<typeof mediaSectionSchema>
-export type ProgressSectionContent = z.infer<typeof progressSectionSchema>
 export type HeroSectionContent = z.infer<typeof heroSectionSchema>
 export type TimelineSectionContent = z.infer<typeof timelineSectionSchema>
 export type FAQSectionContent = z.infer<typeof faqSectionSchema>
@@ -1221,7 +1217,6 @@ export type FutureSectionContent = z.infer<typeof futureSectionSchema>
 export type SectionContent =
 	| BaseSectionContent
 	| MediaSectionContent
-	| ProgressSectionContent
 	| HeroSectionContent
 	| TimelineSectionContent
 	| FAQSectionContent

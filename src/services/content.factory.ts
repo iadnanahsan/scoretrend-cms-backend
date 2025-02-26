@@ -133,8 +133,6 @@ export class ContentFactory {
 		switch (type) {
 			case SectionType.HERO:
 				return this.createHeroSection(data)
-			case SectionType.PROGRESS:
-				return this.createProgressSection(data)
 			case SectionType.CONTENT:
 				return this.createMediaSection(data)
 			case SectionType.OUR_STRENGTHS:
@@ -185,8 +183,6 @@ export class ContentFactory {
 				return this.createContactSection(data)
 			case SectionType.FOOTER:
 				return this.createFooterSection(data)
-			case SectionType.PRESENTATION:
-				return this.createPresentationSection(data)
 			default:
 				return this.createDefaultSection(data)
 		}
@@ -206,18 +202,6 @@ export class ContentFactory {
 						overlay_opacity: data.background_image.overlay_opacity,
 				  }
 				: undefined,
-		}
-	}
-
-	private static createProgressSection(data: any): ProgressSection {
-		return {
-			title: data.title,
-			description: data.description,
-			items: data.items?.map((item: any) => ({
-				title: item.title,
-				percentage: item.percentage,
-				color: item.color,
-			})),
 		}
 	}
 
@@ -515,18 +499,6 @@ export class ContentFactory {
 				url: link.url,
 			})),
 			copyright: data.copyright,
-		}
-	}
-
-	private static createPresentationSection(data: any): ContentSection {
-		return {
-			title: data.title,
-			description: data.description,
-			youtube_video: data.youtube_video
-				? {
-						url: data.youtube_video.url,
-				  }
-				: undefined,
 		}
 	}
 }
