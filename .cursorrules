@@ -1,0 +1,257 @@
+# HEY AHSAN - ScoreTrend CMS Backend Development Rules
+
+## Documentation Adherence
+
+1. All development must strictly follow:
+    - Technical Specification (scoretrend-CMS-backend-tech-spec.md)
+    - Dependencies Documentation (scoretrend-cms-dev-dependencies.md)
+    - Technical Clarifications (scoretrend-cms-clarifications.md)
+    - API Documentation (postman/scoretrend-cms.postman_collection.json)
+
+## Development Process
+
+1. Development Plan:
+
+    - Create and maintain clear development plans
+    - Break down features into manageable tasks
+    - Follow the system architecture defined in documentation
+
+2. Code Organization:
+
+    - Follow the prescribed directory structure
+    - Maintain clean code practices
+    - Use TypeScript for all new files
+    - Follow defined naming conventions
+
+3. Documentation:
+
+    - Keep development-log.md updated
+    - Document all significant changes
+    - Include timestamps for all entries
+    - Reference related documentation when making changes
+
+4. Feature Implementation:
+
+    - Verify against technical specifications
+    - Follow security guidelines
+    - Implement proper error handling
+    - Add appropriate logging
+
+5. Testing:
+
+    - Write unit tests for new features
+    - Follow TDD where applicable
+    - Ensure proper error case coverage
+
+6. Version Control:
+    - Write clear commit messages
+    - Reference documentation in commits
+    - Keep changes focused and atomic
+
+## Logging Requirements
+
+1. All changes must be logged in development-log.md including:
+    - Timestamp
+    - Feature/change description
+    - Reference to technical specifications
+    - Any technical decisions made
+    - Dependencies added/updated
+
+## Security
+
+1. Follow security guidelines in technical specification
+2. Implement proper input validation
+3. Use secure coding practices
+4. Handle sensitive data appropriately
+
+## Quality Assurance
+
+1. Run linting before commits
+2. Ensure type safety
+3. Validate against technical specifications
+4. Check for security vulnerabilities
+
+## Time Management
+
+1. Time Zone Requirements:
+
+    - All timestamps must use Jakarta time zone (UTC+7)
+    - Development log entries must include accurate local time
+    - System time must be synchronized with UTC+7
+    - Use 24-hour format for all time entries
+
+2. Task Management:
+    - Review pending tasks daily at 09:00 (UTC+7)
+    - Prioritize critical issues based on impact
+    - Address TODOs within 24 hours
+    - Document task completion times in development log
+
+## Error Handling
+
+1. Implementation Requirements:
+    - Provide descriptive error messages for all features
+    - Include error codes for easy reference
+    - Log detailed error information for debugging
+    - Implement proper error recovery mechanisms
+
+## Task Prioritization
+
+1. Priority Levels:
+
+    - P0: Critical issues affecting system functionality
+    - P1: High-impact features and security concerns
+    - P2: Important but non-blocking improvements
+    - P3: Nice-to-have enhancements
+
+2. Task Management:
+    - Review and update task priorities daily
+    - Document priority changes in development log
+    - Address P0 and P1 tasks immediately
+    - Schedule P2 and P3 tasks based on sprint capacity
+
+## Response Formatting
+
+1. All responses must:
+    - Begin with "HEY AHSAN"
+    - Use clear and professional language
+    - Include relevant technical details
+    - Reference documentation when applicable
+    - Include timestamps in Jakarta time (UTC+7)
+
+## API Documentation Requirements
+
+1. Postman Collection Maintenance:
+
+    - Keep collection updated with all endpoints
+    - Include request/response examples
+    - Maintain environment variables
+    - Test all endpoints before commits
+    - Document collection changes in development log
+
+2. Collection Organization:
+
+    - Group endpoints by feature
+    - Include authentication tokens
+    - Provide example payloads
+    - Document expected responses
+    - Include error scenarios
+
+3. Version Control:
+    - Update collection version number
+    - Document breaking changes
+    - Maintain changelog
+    - Export collection after changes
+    - Commit collection file with related code changes
+
+## Cursor Operation Rules
+
+### Edit Handling
+
+#### Single-Pass Editing
+
+-   Make all necessary changes in a single pass
+-   Group related edits together
+-   Avoid multiple iterations over the same file
+-   Use clear edit markers and comments
+
+#### Edit Format
+
+```language:path/to/file
+// ... existing code ...
+{{ edited_code }}
+// ... existing code ...
+```
+
+### Tool Usage Guidelines
+
+#### File Operations
+
+-   Verify file exists before attempting operations
+-   Check file permissions
+-   Use absolute paths when possible
+-   Handle file not found scenarios
+
+#### Search Operations
+
+-   Use specific search terms
+-   Verify search results before acting
+-   Handle empty search results gracefully
+-   Cache search results when appropriate
+
+#### Code Analysis
+
+-   Verify syntax before making changes
+-   Check for dependencies
+-   Validate type safety
+-   Ensure consistent formatting
+
+### Error Prevention
+
+#### Pre-Edit Checks
+
+-   Verify file context
+-   Validate syntax
+-   Check dependencies
+-   Confirm file permissions
+
+#### Post-Edit Validation
+
+-   Verify syntax after changes
+-   Check for introduced errors
+-   Validate type safety
+-   Ensure formatting consistency
+
+### Performance Optimization
+
+#### Operation Batching
+
+-   Group related operations
+-   Minimize file reads/writes
+-   Cache frequently accessed data
+-   Use bulk operations when possible
+
+#### Resource Management
+
+-   Release resources promptly
+-   Clean up temporary files
+-   Manage memory efficiently
+-   Handle large files appropriately
+
+### Best Practices
+
+#### Documentation
+
+-   Comment all significant changes
+-   Explain edit rationale
+-   Mark skipped sections clearly
+-   Include context when necessary
+
+#### Error Handling
+
+-   Provide clear error messages
+-   Include recovery steps
+-   Handle edge cases
+-   Maintain system stability
+
+#### Version Control
+
+-   Respect source control
+-   Handle conflicts gracefully
+-   Preserve file history
+-   Support rollback capability
+
+### Operational Constraints
+
+#### File Limits
+
+-   Max file size: 10MB
+-   Max line count: 10,000
+-   Max edit size: 1,000 lines
+-   Max search depth: 5 directories
+
+#### Performance Targets
+
+-   Edit response: < 100ms
+-   Search response: < 200ms
+-   File operations: < 50ms
+-   Validation: < 150ms

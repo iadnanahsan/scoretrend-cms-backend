@@ -1,0 +1,219 @@
+openapi: 3.0.0
+info:
+    title: ScoreTrend CMS Author API
+    version: 1.0.0
+    description: |
+        API documentation for author profile management.
+        Authors can manage their own profile details that appear with their blog posts.
+
+paths:
+    /cms/authors/me:
+        get:
+            tags:
+                - Authors
+            summary: Get current user's author details
+            description: |
+                Retrieves the author details for the currently authenticated user.
+
+                **Features:**
+                - Profile information
+                - Multi-language support
+                - User information
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: query
+                  name: language
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Filter translations by language
+            responses:
+                "200":
+                    description: Author details retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AuthorDetail"
+                            example:
+                                id: "123e4567-e89b-12d3-a456-426614174000"
+                                user_id: "123e4567-e89b-12d3-a456-426614174001"
+                                profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
+                                translations:
+                                    en:
+                                        name: "John Doe"
+                                        description: "Sports analyst and writer"
+                                created_at: "2025-02-13T14:00:00Z"
+                                updated_at: "2025-02-13T14:00:00Z"
+                                user:
+                                    id: "123e4567-e89b-12d3-a456-426614174001"
+                                    name: "John Doe"
+                                    email: "john.doe@example.com"
+                                    role: "AUTHOR"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    description: Author details not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Author details not found"
+                                code: "NOT_FOUND"
+                                details:
+                                    message: "You haven't set up your author details yet"
+
+        put:
+            tags:
+                - Authors
+            summary: Create or update author details
+            description: |
+                Creates or updates author details for the currently authenticated user.
+
+                **Features:**
+                - Profile image management
+                - Multi-language support
+                - Translation management
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if not authenticated
+            security:
+                - BearerAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateAuthorDetailRequest"
+                        example:
+                            profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
+                            translations:
+                                en:
+                                    name: "John Doe"
+                                    description: "Sports analyst and writer"
+            responses:
+                "200":
+                    description: Author details updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AuthorDetail"
+                "201":
+                    description: Author details created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AuthorDetail"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+
+components:
+    schemas:
+        AuthorDetail:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                user_id:
+                    type: string
+                    format: uuid
+                profile_image_url:
+                    type: string
+                    format: uri
+                    nullable: true
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/AuthorTranslation"
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                user:
+                    type: object
+                    properties:
+                        id:
+                            type: string
+                            format: uuid
+                        name:
+                            type: string
+                        email:
+                            type: string
+                            format: email
+                        role:
+                            type: string
+                            enum: [ADMIN, AUTHOR]
+
+        AuthorTranslation:
+            type: object
+            required:
+                - name
+            properties:
+                name:
+                    type: string
+                    maxLength: 100
+                description:
+                    type: string
+                    maxLength: 1000
+
+        UpdateAuthorDetailRequest:
+            type: object
+            properties:
+                profile_image_url:
+                    type: string
+                    format: uri
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/AuthorTranslation"
+
+        Error:
+            type: object
+            properties:
+                error:
+                    type: string
+                code:
+                    type: string
+                details:
+                    type: object
+
+    responses:
+        ValidationError:
+            description: Validation error
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+                                example: "Validation failed"
+                            code:
+                                type: string
+                                example: "VALIDATION_ERROR"
+                            details:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        field:
+                                            type: string
+                                        message:
+                                            type: string
+
+        Unauthorized:
+            description: Authentication required
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: "Authentication required"
+                        code: "UNAUTHORIZED"

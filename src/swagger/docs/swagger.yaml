@@ -1,0 +1,431 @@
+openapi: 3.0.0
+info:
+    title: ScoreTrend CMS API
+    version: 1.0.0
+    description: |
+        API documentation for ScoreTrend CMS Backend - A headless content management system for sports content.
+
+        **Key Features:**
+        - User authentication and authorization
+        - Content management with multilingual support
+        - Blog system with author profiles
+        - Media management with automatic image processing
+        - SEO optimization tools
+
+        **Authentication:**
+        All protected endpoints require a valid JWT token in the Authorization header:
+        `Authorization: Bearer <token>`
+
+servers:
+    - url: https://scoretrend-cms-api.stabilityy.com/api/v1
+      description: Staging server
+
+    - url: http://localhost:3001/api/v1
+      description: Development server
+
+components:
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+
+    schemas:
+        User:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                    example: "123e4567-e89b-12d3-a456-426614174000"
+                name:
+                    type: string
+                    example: "John Doe"
+                email:
+                    type: string
+                    format: email
+                    example: "john.doe@example.com"
+                role:
+                    type: string
+                    enum: [ADMIN, AUTHOR]
+                    example: "AUTHOR"
+                status:
+                    type: string
+                    enum: [ACTIVE, INACTIVE]
+                    example: "ACTIVE"
+                created_at:
+                    type: string
+                    format: date-time
+                    example: "2025-02-12T10:30:00Z"
+                updated_at:
+                    type: string
+                    format: date-time
+                    example: "2025-02-12T10:30:00Z"
+
+        RegistrationRequest:
+            type: object
+            required:
+                - name
+                - email
+                - password
+            properties:
+                name:
+                    type: string
+                    minLength: 2
+                    maxLength: 100
+                    example: "John Doe"
+                    description: User's full name
+                email:
+                    type: string
+                    format: email
+                    example: "john.doe@example.com"
+                    description: User's email address (must be unique)
+                password:
+                    type: string
+                    minLength: 8
+                    pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$
+                    example: "StrongP@ss123"
+                    description: |
+                        Password must contain:
+                        - At least 8 characters
+                        - One uppercase letter
+                        - One lowercase letter
+                        - One number
+                        - One special character
+                role:
+                    type: string
+                    enum: [ADMIN, AUTHOR]
+                    example: "AUTHOR"
+                    description: User role (defaults to AUTHOR if not specified)
+
+        LoginRequest:
+            type: object
+            required:
+                - email
+                - password
+            properties:
+                email:
+                    type: string
+                    format: email
+                    example: "john.doe@example.com"
+                    description: User's registered email address
+                password:
+                    type: string
+                    example: "StrongP@ss123"
+                    description: User's password
+
+        ForgotPasswordRequest:
+            type: object
+            required:
+                - email
+            properties:
+                email:
+                    type: string
+                    format: email
+                    example: "john.doe@example.com"
+                    description: Email address to send password reset link
+
+        ResetPasswordRequest:
+            type: object
+            required:
+                - token
+                - password
+            properties:
+                token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    description: Reset token received via email
+                password:
+                    type: string
+                    minLength: 8
+                    pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$
+                    example: "NewStrongP@ss123"
+                    description: |
+                        New password must contain:
+                        - At least 8 characters
+                        - One uppercase letter
+                        - One lowercase letter
+                        - One number
+                        - One special character
+
+        Error:
+            type: object
+            properties:
+                status:
+                    type: string
+                    enum: [error]
+                    example: "error"
+                message:
+                    type: string
+                    example: "Invalid credentials"
+
+paths:
+    /auth/register:
+        post:
+            summary: Register a new user (Admin only)
+            description: |
+                Creates a new user account in the system. Only administrators can create new users.
+
+                **Key Features:**
+                - Secure password hashing
+                - Role-based access control
+                - Email verification
+                - Welcome email notification
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if no authentication token
+                - Returns 403 if user is not an admin
+                - Returns 409 if email already exists
+            security:
+                - BearerAuth: []
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/RegistrationRequest"
+            responses:
+                "201":
+                    description: User created successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "Registration successful"
+                                    token:
+                                        type: string
+                                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                    user:
+                                        $ref: "#/components/schemas/User"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "403":
+                    description: Forbidden - Insufficient permissions
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "409":
+                    description: Email already exists
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/login:
+        post:
+            summary: Login user
+            description: |
+                Authenticates a user and returns a JWT token.
+
+                **Key Features:**
+                - JWT-based authentication
+                - Secure password verification
+                - Role information in token
+                - Session tracking
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if credentials are invalid
+                - Returns 403 if account is inactive
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LoginRequest"
+            responses:
+                "200":
+                    description: Login successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "Login successful"
+                                    token:
+                                        type: string
+                                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                    user:
+                                        $ref: "#/components/schemas/User"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Invalid credentials
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "403":
+                    description: Account inactive
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/forgot-password:
+        post:
+            summary: Request password reset
+            description: |
+                Initiates the password reset process by sending a reset link to the user's email.
+
+                **Key Features:**
+                - Secure token generation
+                - Email delivery
+                - Token expiration
+                - Rate limiting in production
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 404 if email not found
+                - Returns 429 if too many requests (production only)
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ForgotPasswordRequest"
+            responses:
+                "200":
+                    description: Password reset email sent
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    status:
+                                        type: string
+                                        enum: [success]
+                                        example: "success"
+                                    message:
+                                        type: string
+                                        example: "Password reset instructions sent to your email"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "404":
+                    description: Email not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/reset-password:
+        post:
+            summary: Reset password using token
+            description: |
+                Resets the user's password using the token received via email.
+
+                **Key Features:**
+                - Token verification
+                - Password validation
+                - Secure password update
+                - Session invalidation
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if token is invalid or expired
+                - Returns 429 if too many attempts (production only)
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ResetPasswordRequest"
+            responses:
+                "200":
+                    description: Password reset successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    status:
+                                        type: string
+                                        enum: [success]
+                                        example: "success"
+                                    message:
+                                        type: string
+                                        example: "Password has been reset successfully"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Invalid or expired token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/logout:
+        post:
+            summary: Logout user
+            description: |
+                Invalidates the current user session.
+
+                **Key Features:**
+                - Token invalidation
+                - Session cleanup
+                - Audit logging
+
+                **Edge Cases:**
+                - Returns 401 if not authenticated
+            security:
+                - BearerAuth: []
+            tags:
+                - Authentication
+            responses:
+                "200":
+                    description: Logout successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    status:
+                                        type: string
+                                        enum: [success]
+                                        example: "success"
+                                    message:
+                                        type: string
+                                        example: "Logged out successfully"
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"

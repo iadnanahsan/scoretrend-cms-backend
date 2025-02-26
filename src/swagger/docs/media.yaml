@@ -1,0 +1,246 @@
+paths:
+    /cms/media/upload:
+        post:
+            summary: Upload media file
+            description: |
+                Uploads and processes media files (images) with automatic optimization.
+                Supports blog thumbnails, blog covers, and section images.
+
+                **Features:**
+                - Automatic image resizing
+                - WebP conversion
+                - Quality optimization
+                - Size validation
+                - Dimension validation
+
+                **Constraints:**
+                - Blog Thumbnail: 300x300px, max 500KB
+                - Blog Cover: 1200x630px, max 2MB
+                - Section Hero: 1920x1080px, max 2MB
+                - Section Content: 800x600px, max 1MB
+                - Author Profile: 400x400px, max 1MB
+
+                **Supported Formats:**
+                - JPEG/JPG
+                - PNG
+                - WebP
+                - GIF (static only)
+
+                **Edge Cases:**
+                - Returns 400 if file type not supported
+                - Returns 400 if file size exceeds limit
+                - Returns 400 if dimensions invalid
+                - Returns 500 if processing fails
+            security:
+                - BearerAuth: []
+            tags:
+                - Media
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required:
+                                - file
+                                - type
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+                                    description: Image file to upload
+                                type:
+                                    type: string
+                                    enum: [blog_thumbnail, blog_cover, section_hero, section_content, author_profile]
+                                    description: Type of image being uploaded
+                                    example: "blog_thumbnail"
+                                    examples:
+                                        blog_thumbnail:
+                                            value: "blog_thumbnail"
+                                            summary: "Blog post thumbnail (300x300, max 500KB)"
+                                        blog_cover:
+                                            value: "blog_cover"
+                                            summary: "Blog post cover (1200x630, max 2MB)"
+                                        section_hero:
+                                            value: "section_hero"
+                                            summary: "Section hero image (1920x1080, max 2MB)"
+                                        section_content:
+                                            value: "section_content"
+                                            summary: "Section content image (800x600, max 1MB)"
+                                        author_profile:
+                                            value: "author_profile"
+                                            summary: "Author profile picture (400x400, max 1MB)"
+            responses:
+                "200":
+                    description: File uploaded successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/MediaResponse"
+                            examples:
+                                blog_thumbnail:
+                                    value:
+                                        url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+                                        dimensions:
+                                            width: 300
+                                            height: 300
+                                        size: 102400
+                                        format: "webp"
+                                        type: "blog_thumbnail"
+                                section_hero:
+                                    value:
+                                        url: "https://storage.googleapis.com/scoretrend/sections/hero/example.webp"
+                                        dimensions:
+                                            width: 1920
+                                            height: 1080
+                                        size: 1048576
+                                        format: "webp"
+                                        type: "section_hero"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                    code:
+                                        type: string
+                                        enum: [VALIDATION_ERROR, FILE_SIZE_ERROR, DIMENSION_ERROR]
+                                    details:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                            examples:
+                                invalid_type:
+                                    value:
+                                        error: "Invalid file type"
+                                        code: "VALIDATION_ERROR"
+                                        details:
+                                            message: "Allowed types: image/jpeg, image/png, image/webp, image/gif"
+                                size_exceeded:
+                                    value:
+                                        error: "File size exceeded"
+                                        code: "FILE_SIZE_ERROR"
+                                        details:
+                                            message: "Maximum file size for blog_thumbnail is 500KB"
+                                invalid_dimensions:
+                                    value:
+                                        error: "Invalid dimensions"
+                                        code: "DIMENSION_ERROR"
+                                        details:
+                                            message: "Blog thumbnail must be 300x300px"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "500":
+                    description: Processing error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Failed to process image"
+
+    /cms/media/{url}:
+        delete:
+            summary: Delete media file
+            description: |
+                Deletes a media file from storage.
+                Only accessible by administrators.
+
+                **Edge Cases:**
+                - Returns 400 if URL is invalid
+                - Returns 404 if file not found
+                - Returns 500 if deletion fails
+            security:
+                - BearerAuth: []
+            tags:
+                - Media
+            parameters:
+                - in: path
+                  name: url
+                  required: true
+                  schema:
+                      type: string
+                      format: uri
+                  description: URL of the file to delete (encoded)
+            responses:
+                "204":
+                    description: File deleted successfully
+                "400":
+                    description: Invalid URL
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Invalid file URL"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    description: File not found
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "File not found"
+                "500":
+                    description: Deletion error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Failed to delete file"
+
+components:
+    schemas:
+        MediaResponse:
+            type: object
+            required:
+                - url
+                - dimensions
+                - size
+                - format
+                - type
+            properties:
+                url:
+                    type: string
+                    format: uri
+                    pattern: "^https://storage\\.googleapis\\.com/scoretrend/.*\\.(webp|jpg|jpeg|png|gif)$"
+                dimensions:
+                    type: object
+                    required:
+                        - width
+                        - height
+                    properties:
+                        width:
+                            type: integer
+                            minimum: 1
+                        height:
+                            type: integer
+                            minimum: 1
+                size:
+                    type: integer
+                    description: File size in bytes
+                    minimum: 1
+                format:
+                    type: string
+                    enum: [webp, jpg, jpeg, png, gif]
+                type:
+                    type: string
+                    enum: [blog_thumbnail, blog_cover, section_hero, section_content, author_profile]
+                created_at:
+                    type: string
+                    format: date-time

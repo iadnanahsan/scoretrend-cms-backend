@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  AUTHOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PageType {
+  HOME
+  ABOUT
+  HOW_IT_WORKS
+  CONTACT
+  FAQ
+  NEWS
+  PRIVACY_POLICY
+  COOKIE_POLICY
+  SYSTEM
+}
+
+enum SectionType {
+  HERO
+  CONTENT
+  HISTORY
+  TEAM
+  TIMELINE
+  PROGRESS
+  SPORTS_CARD
+  MISSION
+  GRAPH_HOW
+  GRAPH_EXAMPLE
+  EVENTS
+  STATS_LIVE // Live match statistics section
+  STANDINGS
+  LINEUP
+  FAQ
+  CONTACT
+  PRESENTATION
+  FOOTER
+  BORN
+  OUR_STRENGTHS
+  FUTURE
+  DISCOVER
+  SCORETREND_WHAT // What Is ScoreTrend? section
+  TREND_OVERVIEW // Overview of Goal & Team Trends
+  GOAL_TREND // Goal Trend explanation
+  TEAM_TREND // Team Trend explanation
+  TABS_UNDER_GAMES // Match information tabs
+  EXPAND_EVENT // Expand event explanation section
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Models
+model User {
+  id                   String        @id @default(uuid())
+  email                String        @unique
+  password             String
+  name                 String
+  role                 UserRole
+  status               UserStatus    @default(ACTIVE)
+  email_verified       Boolean       @default(false)
+  email_verified_at    DateTime?
+  verification_token   String?       @unique
+  verification_expires DateTime?
+  created_at           DateTime      @default(now())
+  updated_at           DateTime      @updatedAt
+  author_detail        AuthorDetail?
+  blog_posts           BlogPost[]
+  comments             Comment[]
+  updated_posts        BlogPost[]    @relation("UpdatedBy")
+}
+
+model Page {
+  id           String            @id @default(uuid())
+  type         PageType
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  translations PageTranslation[]
+  sections     Section[]
+}
+
+model PageTranslation {
+  id         String   @id @default(uuid())
+  page_id    String
+  language   String   @db.VarChar(2)
+  alias      String
+  seo_data   Json?
+  created_at DateTime @default(now())
+  page       Page     @relation(fields: [page_id], references: [id])
+
+  @@unique([page_id, language])
+}
+
+model Section {
+  id           String               @id @default(uuid())
+  page_id      String
+  type         SectionType
+  order_index  Int
+  created_at   DateTime             @default(now())
+  page         Page                 @relation(fields: [page_id], references: [id])
+  translations SectionTranslation[] @relation("SectionToTranslation")
+}
+
+model SectionTranslation {
+  id         String   @id @default(uuid())
+  section_id String
+  language   String   @db.VarChar(2)
+  content    Json
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  section    Section  @relation("SectionToTranslation", fields: [section_id], references: [id], onDelete: Cascade)
+
+  @@unique([section_id, language])
+}
+
+model BlogCategory {
+  id           String                @id @default(uuid())
+  created_at   DateTime              @default(now())
+  updated_at   DateTime              @updatedAt
+  translations CategoryTranslation[]
+  posts        BlogPost[]
+}
+
+model CategoryTranslation {
+  id          String       @id @default(uuid())
+  category_id String
+  language    String       @db.VarChar(2)
+  name        String
+  description String?
+  created_at  DateTime     @default(now())
+  category    BlogCategory @relation(fields: [category_id], references: [id])
+
+  @@unique([category_id, language])
+}
+
+model BlogPost {
+  id            String            @id @default(uuid())
+  category_id   String
+  author_id     String
+  status        BlogStatus        @default(DRAFT)
+  thumbnail_url String?
+  cover_url     String?
+  view_count    Int               @default(0)
+  reading_time  Int?
+  created_at    DateTime          @default(now())
+  updated_at    DateTime          @updatedAt
+  updated_by_id String?
+  category      BlogCategory      @relation(fields: [category_id], references: [id])
+  author        User              @relation(fields: [author_id], references: [id])
+  updated_by    User?             @relation("UpdatedBy", fields: [updated_by_id], references: [id])
+  translations  PostTranslation[] @relation("BlogPostTranslations")
+  comments      Comment[]         @relation("PostComments")
+
+  @@index([category_id])
+  @@index([author_id])
+  @@index([created_at])
+  @@index([status])
+  @@index([view_count])
+  @@index([reading_time])
+}
+
+model PostTranslation {
+  id         String   @id @default(uuid())
+  post_id    String
+  language   String   @db.VarChar(2)
+  title      String
+  content    String   @db.Text
+  alias      String
+  seo_data   Json?
+  created_at DateTime @default(now())
+  post       BlogPost @relation("BlogPostTranslations", fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, language])
+  @@index([language])
+  @@index([title])
+}
+
+model Comment {
+  id         String        @id @default(uuid())
+  post_id    String
+  user_id    String?
+  guest_name String?
+  content    String        @db.Text
+  reply_to   String?
+  status     CommentStatus @default(PENDING)
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+
+  // Relations
+  post    BlogPost  @relation("PostComments", fields: [post_id], references: [id], onDelete: Cascade)
+  user    User?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  replies Comment[] @relation("CommentReplies")
+  parent  Comment?  @relation("CommentReplies", fields: [reply_to], references: [id], onDelete: SetNull)
+
+  @@index([post_id])
+  @@index([user_id])
+  @@index([reply_to])
+}
+
+model AuthorDetail {
+  id                String                    @id @default(uuid())
+  user_id           String                    @unique
+  profile_image_url String?
+  created_at        DateTime                  @default(now())
+  updated_at        DateTime                  @updatedAt
+  user              User                      @relation(fields: [user_id], references: [id])
+  translations      AuthorDetailTranslation[]
+}
+
+model AuthorDetailTranslation {
+  id               String       @id @default(uuid())
+  author_detail_id String
+  language         String       @db.VarChar(2)
+  name             String
+  description      String?
+  author_detail    AuthorDetail @relation(fields: [author_detail_id], references: [id])
+
+  @@unique([author_detail_id, language])
+}
+
+model FAQCategory {
+  id           String                   @id @default(uuid())
+  order_index  Int                      @default(0)
+  created_at   DateTime                 @default(now())
+  updated_at   DateTime                 @updatedAt
+  translations FAQCategoryTranslation[]
+  items        FAQItem[]
+}
+
+model FAQCategoryTranslation {
+  id          String      @id @default(uuid())
+  category_id String
+  language    String      @db.VarChar(2)
+  name        String
+  description String?     @db.Text
+  created_at  DateTime    @default(now())
+  category    FAQCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@unique([category_id, language])
+}
+
+model FAQItem {
+  id           String               @id @default(uuid())
+  category_id  String
+  order_index  Int                  @default(0)
+  created_at   DateTime             @default(now())
+  updated_at   DateTime             @updatedAt
+  category     FAQCategory          @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  translations FAQItemTranslation[]
+
+  @@index([category_id, order_index])
+}
+
+model FAQItemTranslation {
+  id         String   @id @default(uuid())
+  item_id    String
+  language   String   @db.VarChar(2)
+  question   String   @db.Text
+  answer     String   @db.Text
+  created_at DateTime @default(now())
+  item       FAQItem  @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_id, language])
+}

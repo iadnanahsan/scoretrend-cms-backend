@@ -1,0 +1,55 @@
+openapi: 3.0.0
+info:
+    title: ScoreTrend CMS API
+    version: 1.0.0
+    description: |
+        API documentation for ScoreTrend CMS Backend - A headless content management system for sports content.
+
+        **Key Features:**
+        - User authentication and authorization
+        - Content management with multilingual support
+        - Blog system with author profiles
+        - Media management with automatic image processing
+        - SEO optimization tools
+
+servers:
+    - url: https://scoretrend-cms-api.stabilityy.com
+      description: Staging server (root endpoints)
+    - url: https://scoretrend-cms-api.stabilityy.com/api/v1
+      description: Staging server (API endpoints)
+    - url: http://localhost:3001
+      description: Local development server (root endpoints)
+    - url: http://localhost:3001/api/v1
+      description: Local development server (API endpoints)
+
+components:
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+
+tags:
+    - name: Authentication
+      description: User authentication and authorization endpoints
+    - name: Users
+      description: User management endpoints
+    - name: Blog
+      description: Blog management endpoints
+    - name: Media
+      description: Media management endpoints
+    - name: SEO
+      description: SEO optimization endpoints including sitemap and robots.txt
+
+# Reference to other API documentation files
+paths: {}
+
+# Import other API documentation files
+x-swagger-files:
+    - auth.yaml
+    - users.yaml
+    - blog.yaml
+    - media.yaml
+    - pages.yaml
+    - sections.yaml
+    - seo.yaml

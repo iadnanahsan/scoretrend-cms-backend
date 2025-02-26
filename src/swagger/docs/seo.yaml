@@ -1,0 +1,112 @@
+paths:
+    /sitemap.xml:
+        get:
+            summary: Get sitemap
+            description: |
+                Retrieves the XML sitemap containing all public URLs.
+                Includes pages and blog posts in all supported languages.
+
+                **Features:**
+                - Automatically generated from content
+                - Multi-language support with hreflang tags
+                - ISO 8601 timestamps with timezone information
+                - Proper XML formatting with XHTML namespace
+
+                **Edge Cases:**
+                - Returns 500 if database connection fails
+                - Returns 500 if content generation fails
+                - Returns 500 if XML generation fails
+                - Returns 500 if unable to fetch published content
+            tags:
+                - SEO
+            servers:
+                - url: https://scoretrend-cms-api.stabilityy.com
+                  description: Staging server (root endpoints)
+                - url: http://localhost:3001
+                  description: Local development server (root endpoints)
+            responses:
+                "200":
+                    description: Sitemap XML
+                    content:
+                        application/xml:
+                            schema:
+                                type: string
+                            example: |
+                                <?xml version="1.0" encoding="UTF-8"?>
+                                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+                                       xmlns:xhtml="http://www.w3.org/1999/xhtml">
+                                    <url>
+                                        <loc>https://scoretrend.com/about</loc>
+                                        <lastmod>2024-03-15T14:30:00Z</lastmod>
+                                        <xhtml:link rel="alternate" hreflang="en" href="https://scoretrend.com/en/about"/>
+                                        <xhtml:link rel="alternate" hreflang="it" href="https://scoretrend.com/it/about"/>
+                                        <xhtml:link rel="alternate" hreflang="pt" href="https://scoretrend.com/pt/about"/>
+                                        <xhtml:link rel="alternate" hreflang="es" href="https://scoretrend.com/es/about"/>
+                                    </url>
+                                    <url>
+                                        <loc>https://scoretrend.com/blog/latest-football-news</loc>
+                                        <lastmod>2024-03-15T15:45:00Z</lastmod>
+                                        <xhtml:link rel="alternate" hreflang="en" href="https://scoretrend.com/en/blog/latest-football-news"/>
+                                        <xhtml:link rel="alternate" hreflang="it" href="https://scoretrend.com/it/blog/ultime-notizie-calcio"/>
+                                        <xhtml:link rel="alternate" hreflang="pt" href="https://scoretrend.com/pt/blog/ultimas-noticias-futebol"/>
+                                        <xhtml:link rel="alternate" hreflang="es" href="https://scoretrend.com/es/blog/ultimas-noticias-futbol"/>
+                                    </url>
+                                </urlset>
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Failed to generate sitemap"
+                                code: "INTERNAL_SERVER_ERROR"
+                                details: "Database connection error"
+
+    /robots.txt:
+        get:
+            summary: Get robots.txt
+            description: |
+                Retrieves the robots.txt file containing crawling instructions for search engines.
+
+                **Features:**
+                - Configurable crawling rules
+                - API and admin routes disallowed
+                - Sitemap reference
+                - Cache control headers (24 hours)
+
+                **Edge Cases:**
+                - Returns 500 if configuration is invalid
+                - Returns 500 if file generation fails
+                - Returns 500 if unable to read configuration
+            tags:
+                - SEO
+            servers:
+                - url: https://scoretrend-cms-api.stabilityy.com
+                  description: Staging server (root endpoints)
+                - url: http://localhost:3001
+                  description: Local development server (root endpoints)
+            responses:
+                "200":
+                    description: Robots.txt content
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                            example: |
+                                User-agent: *
+                                Allow: /
+                                Disallow: /api/
+                                Disallow: /admin/
+
+                                Sitemap: https://scoretrend.com/sitemap.xml
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Failed to generate robots.txt"
+                                code: "INTERNAL_SERVER_ERROR"
+                                details: "Configuration error"

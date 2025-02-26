@@ -1,0 +1,1368 @@
+openapi: 3.0.0
+info:
+    title: ScoreTrend CMS Blog API
+    version: 1.0.0
+    description: |
+        API documentation for blog management system.
+
+        **Features:**
+        - Blog post management with translations
+        - View count tracking
+        - Reading time calculation
+        - Comment system with moderation
+        - Author details management
+
+paths:
+    /cms/blog/posts:
+        get:
+            tags:
+                - Blog
+            summary: List blog posts
+            description: |
+                Retrieves a paginated list of blog posts with enhanced filtering and sorting capabilities.
+                Includes view count and reading time information.
+
+                **Features:**
+                - Pagination support (1-100 items per page)
+                - Category and author filtering
+                - Date range filtering
+                - Multiple sorting options
+                - Case-insensitive search
+                - Performance metrics
+                - Status filtering
+                - Language filtering
+
+                **Performance:**
+                - Response time monitoring
+                - Query optimization
+                - Input validation
+                - Error tracking
+            parameters:
+                - in: query
+                  name: page
+                  schema:
+                      type: integer
+                      minimum: 1
+                      default: 1
+                  description: Page number for pagination
+                - in: query
+                  name: limit
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                  description: Number of items per page
+                - in: query
+                  name: category_id
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Filter by category ID
+                - in: query
+                  name: author_id
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Filter by author ID
+                - in: query
+                  name: status
+                  schema:
+                      type: string
+                      enum: [DRAFT, PUBLISHED]
+                  description: Filter by blog post status
+                - in: query
+                  name: language
+                  schema:
+                      type: string
+                      pattern: "^[a-z]{2}$"
+                      example: "en"
+                  description: Filter content by language (2-letter ISO code)
+                - in: query
+                  name: start_date
+                  schema:
+                      type: string
+                      format: date
+                      example: "2024-01-01"
+                  description: Filter posts created on or after this date
+                - in: query
+                  name: end_date
+                  schema:
+                      type: string
+                      format: date
+                      example: "2024-12-31"
+                  description: Filter posts created on or before this date
+                - in: query
+                  name: sort_by
+                  schema:
+                      type: string
+                      enum: [created_at, view_count, reading_time]
+                      default: created_at
+                  description: Field to sort results by
+                - in: query
+                  name: sort_direction
+                  schema:
+                      type: string
+                      enum: [asc, desc]
+                      default: desc
+                  description: Sort direction
+                - in: query
+                  name: search
+                  schema:
+                      type: string
+                      minLength: 2
+                      maxLength: 100
+                  description: Search in titles and content (case-insensitive)
+            responses:
+                "200":
+                    description: List of blog posts
+                    headers:
+                        X-Response-Time:
+                            schema:
+                                type: string
+                                example: "123.45ms"
+                            description: Query execution time
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedBlogPostResponse"
+                            example:
+                                items:
+                                    - id: "123e4567-e89b-12d3-a456-426614174000"
+                                      category_id: "123e4567-e89b-12d3-a456-426614174001"
+                                      category_name: "Sports"
+                                      author_id: "123e4567-e89b-12d3-a456-426614174002"
+                                      author_name: "John Doe"
+                                      status: "PUBLISHED"
+                                      thumbnail_url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+                                      cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                                      view_count: 150
+                                      reading_time: 5
+                                      translations:
+                                          en:
+                                              title: "Example Blog Post"
+                                              content: "This is an example blog post content."
+                                              alias: "example-blog-post"
+                                              seo:
+                                                  title: "Example Blog Post - ScoreTrend"
+                                                  description: "This is an example blog post for ScoreTrend CMS."
+                                                  keywords: ["example", "blog", "scoretrend"]
+                                      created_at: "2024-01-15T10:30:00Z"
+                                      updated_at: "2024-01-15T10:30:00Z"
+                                pagination:
+                                    total: 100
+                                    page: 1
+                                    limit: 10
+                                    pages: 10
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Validation failed"
+                                    details:
+                                        type: object
+                                        properties:
+                                            page:
+                                                type: string
+                                                example: "Page must be a positive number"
+                                            limit:
+                                                type: string
+                                                example: "Limit must be between 1 and 100"
+                                            category_id:
+                                                type: string
+                                                example: "Invalid category ID format"
+                                            author_id:
+                                                type: string
+                                                example: "Invalid author ID format"
+                                            status:
+                                                type: string
+                                                example: "Invalid status. Must be one of: DRAFT, PUBLISHED"
+                                            language:
+                                                type: string
+                                                example: "Language must be a 2-character ISO code"
+                                            start_date:
+                                                type: string
+                                                example: "Invalid start date format"
+                                            end_date:
+                                                type: string
+                                                example: "Invalid end date format"
+                                            date_range:
+                                                type: string
+                                                example: "Start date must be before end date"
+                                            sort_by:
+                                                type: string
+                                                example: "Invalid sort field. Must be one of: created_at, view_count, reading_time"
+                                            sort_direction:
+                                                type: string
+                                                example: "Sort direction must be either 'asc' or 'desc'"
+                                            search:
+                                                type: string
+                                                example: "Search term must be at least 2 characters long"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Failed to list blog posts"
+                                    message:
+                                        type: string
+                                        example: "An unexpected error occurred"
+
+        post:
+            tags:
+                - Blog
+            summary: Create a new blog post
+            description: |
+                Creates a new blog post with translations.
+                Reading time is automatically calculated.
+
+                **Features:**
+                - Multi-language support
+                - Reading time calculation
+                - SEO metadata
+                - Media references
+                - Author association
+            security:
+                - BearerAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CreateBlogPostRequest"
+                        example:
+                            category_id: "123e4567-e89b-12d3-a456-426614174001"
+                            thumbnail_url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+                            cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                            translations:
+                                en:
+                                    title: "Example Blog Post"
+                                    content: "This is an example blog post content."
+                                    alias: "example-blog-post"
+                                    seo:
+                                        title: "Example Blog Post - ScoreTrend"
+                                        description: "This is an example blog post for ScoreTrend CMS."
+                                        keywords: ["example", "blog", "scoretrend"]
+                                        og_title: "Example Blog Post - ScoreTrend"
+                                        og_description: "This is an example blog post for ScoreTrend CMS."
+                                        og_image: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+            responses:
+                "201":
+                    description: Blog post created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogPost"
+                            example:
+                                id: "123e4567-e89b-12d3-a456-426614174000"
+                                category_id: "123e4567-e89b-12d3-a456-426614174001"
+                                author_id: "123e4567-e89b-12d3-a456-426614174002"
+                                status: "DRAFT"
+                                thumbnail_url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+                                cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                                view_count: 0
+                                reading_time: 5
+                                translations:
+                                    en:
+                                        title: "Example Blog Post"
+                                        content: "This is an example blog post content."
+                                        alias: "example-blog-post"
+                                        seo:
+                                            title: "Example Blog Post - ScoreTrend"
+                                            description: "This is an example blog post for ScoreTrend CMS."
+                                            keywords: ["example", "blog", "scoretrend"]
+                                            og_title: "Example Blog Post - ScoreTrend"
+                                            og_description: "This is an example blog post for ScoreTrend CMS."
+                                            og_image: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Validation failed"
+                                code: "VALIDATION_ERROR"
+                                details:
+                                    field: "translations"
+                                    message: "Invalid language code"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "409":
+                    description: Conflict error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Blog post alias already exists"
+                                code: "DUPLICATE_ENTRY"
+                                details:
+                                    field: "alias"
+                                    message: "A blog post with this alias already exists"
+
+    /cms/blog/posts/{id}:
+        get:
+            tags:
+                - Blog
+            summary: Get blog post by ID
+            description: |
+                Retrieves a blog post by ID.
+                Increments view count for published posts.
+
+                **Features:**
+                - View count tracking
+                - Language filtering
+                - Author information
+                - Category details
+                - Translation support
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                - in: query
+                  name: language
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+            responses:
+                "200":
+                    description: Blog post details
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogPost"
+                            example:
+                                id: "123e4567-e89b-12d3-a456-426614174000"
+                                category_id: "123e4567-e89b-12d3-a456-426614174001"
+                                author_id: "123e4567-e89b-12d3-a456-426614174002"
+                                status: "PUBLISHED"
+                                thumbnail_url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+                                cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                                view_count: 151
+                                reading_time: 5
+                                translations:
+                                    en:
+                                        title: "Example Blog Post"
+                                        content: "This is an example blog post content."
+                                        alias: "example-blog-post"
+                                        seo:
+                                            title: "Example Blog Post - ScoreTrend"
+                                            description: "This is an example blog post for ScoreTrend CMS."
+                                            keywords: ["example", "blog", "scoretrend"]
+                                            og_title: "Example Blog Post - ScoreTrend"
+                                            og_description: "This is an example blog post for ScoreTrend CMS."
+                                            og_image: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Invalid blog post ID format"
+                                code: "VALIDATION_ERROR"
+                                details:
+                                    field: "id"
+                                    message: "ID must be a valid UUID"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    description: Blog post not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Blog post not found"
+                                code: "NOT_FOUND"
+                                details:
+                                    id: "123e4567-e89b-12d3-a456-426614174000"
+                                    message: "No blog post exists with this ID"
+
+        put:
+            tags:
+                - Blog
+            summary: Update blog post
+            description: |
+                Updates a blog post.
+                Recalculates reading time if content changes.
+
+                **Features:**
+                - Content updates
+                - Status changes
+                - Translation updates
+                - SEO updates
+                - Media updates
+                - Reading time recalculation
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateBlogPostRequest"
+                        example:
+                            status: "PUBLISHED"
+                            translations:
+                                en:
+                                    title: "Updated Blog Post"
+                                    content: "This is an updated blog post content."
+                                    alias: "updated-blog-post"
+                                    seo:
+                                        title: "Updated Blog Post - ScoreTrend"
+                                        description: "This is an updated blog post for ScoreTrend CMS."
+                                        keywords: ["updated", "blog", "scoretrend"]
+                                        og_title: "Updated Blog Post - ScoreTrend"
+                                        og_description: "This is an updated blog post for ScoreTrend CMS."
+                                        og_image: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+            responses:
+                "200":
+                    description: Blog post updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogPost"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Validation failed"
+                                code: "VALIDATION_ERROR"
+                                details:
+                                    field: "translations.en.title"
+                                    message: "Title cannot exceed 255 characters"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    description: Permission error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Insufficient permissions"
+                                code: "FORBIDDEN"
+                                details:
+                                    message: "Only administrators or the author can update this blog post"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "409":
+                    description: Conflict error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Blog post alias already exists"
+                                code: "DUPLICATE_ENTRY"
+                                details:
+                                    field: "alias"
+                                    message: "A blog post with this alias already exists"
+
+        delete:
+            tags:
+                - Blog
+            summary: Delete blog post
+            description: |
+                Deletes a blog post.
+                Only available to admins and post authors.
+
+                **Features:**
+                - Permission checking
+                - Cascade deletion
+                - Comment cleanup
+                - Media reference cleanup
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            responses:
+                "204":
+                    description: Blog post deleted successfully
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Invalid blog post ID format"
+                                code: "VALIDATION_ERROR"
+                                details:
+                                    field: "id"
+                                    message: "ID must be a valid UUID"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    description: Permission error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Insufficient permissions"
+                                code: "FORBIDDEN"
+                                details:
+                                    message: "Only administrators or the author can delete this blog post"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/blog/categories:
+        get:
+            summary: List blog categories
+            description: |
+                Retrieves a paginated list of blog categories with translations.
+                Supports language filtering and pagination.
+
+                **Features:**
+                - Multi-language support
+                - Pagination
+                - Optional language filtering
+            security:
+                - BearerAuth: []
+            tags:
+                - Blog
+            parameters:
+                - in: query
+                  name: page
+                  schema:
+                      type: integer
+                      default: 1
+                  description: Page number
+                - in: query
+                  name: limit
+                  schema:
+                      type: integer
+                      default: 10
+                  description: Items per page
+                - in: query
+                  name: language
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Filter translations by language
+            responses:
+                "200":
+                    description: List of categories
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedCategoryResponse"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+
+        post:
+            summary: Create blog category
+            description: |
+                Creates a new blog category with translations.
+                Only accessible by administrators.
+
+                **Features:**
+                - Multi-language support
+                - Translation validation
+                - Name uniqueness check
+            security:
+                - BearerAuth: []
+            tags:
+                - Blog
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CreateCategoryRequest"
+            responses:
+                "201":
+                    description: Category created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogCategory"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "409":
+                    description: Category with this name already exists
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /cms/blog/categories/{id}:
+        get:
+            summary: Get category by ID
+            description: |
+                Retrieves a specific blog category with translations.
+                Supports language filtering.
+
+                **Features:**
+                - Multi-language support
+                - Optional language filtering
+            security:
+                - BearerAuth: []
+            tags:
+                - Blog
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Category ID
+                - in: query
+                  name: language
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Filter translations by language
+            responses:
+                "200":
+                    description: Category details
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogCategory"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+        put:
+            summary: Update category
+            description: |
+                Updates a blog category and its translations.
+                Only accessible by administrators.
+
+                **Features:**
+                - Multi-language support
+                - Translation validation
+                - Name uniqueness check
+            security:
+                - BearerAuth: []
+            tags:
+                - Blog
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Category ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateCategoryRequest"
+            responses:
+                "200":
+                    description: Category updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogCategory"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "409":
+                    description: Category with this name already exists
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+        delete:
+            summary: Delete category
+            description: |
+                Deletes a blog category.
+                Only accessible by administrators.
+                Cannot delete categories with associated posts.
+
+                **Edge Cases:**
+                - Returns 409 if category has associated posts
+            security:
+                - BearerAuth: []
+            tags:
+                - Blog
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Category ID
+            responses:
+                "204":
+                    description: Category deleted successfully
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "409":
+                    description: Cannot delete category with associated posts
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /cms/blog/comments/{id}/moderate:
+        patch:
+            tags:
+                - Blog
+            summary: Moderate a comment
+            description: |
+                Updates the moderation status of a comment.
+                Only administrators can moderate comments.
+
+                **Features:**
+                - Status updates (PENDING, APPROVED, REJECTED, SPAM)
+                - Notification system
+                - Audit logging
+                - Spam detection
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if not authenticated
+                - Returns 403 if not an administrator
+                - Returns 404 if comment not found
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - status
+                            properties:
+                                status:
+                                    type: string
+                                    enum: [PENDING, APPROVED, REJECTED, SPAM]
+                                    description: |
+                                        New moderation status:
+                                        - PENDING: Reset to awaiting moderation
+                                        - APPROVED: Make visible to all users
+                                        - REJECTED: Hide from public view
+                                        - SPAM: Mark as spam and hide
+                                reason:
+                                    type: string
+                                    description: Optional reason for moderation decision
+                                    example: "Contains inappropriate content"
+            responses:
+                "200":
+                    description: Comment moderated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogComment"
+                            example:
+                                id: "123e4567-e89b-12d3-a456-426614174000"
+                                post_id: "123e4567-e89b-12d3-a456-426614174001"
+                                user_id: "123e4567-e89b-12d3-a456-426614174002"
+                                content: "This is a comment."
+                                status: "APPROVED"
+                                created_at: "2025-02-13T14:00:00Z"
+                                updated_at: "2025-02-13T14:30:00Z"
+                                user:
+                                    id: "123e4567-e89b-12d3-a456-426614174002"
+                                    name: "John Doe"
+                                    email: "john@example.com"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Invalid status value"
+                                code: "VALIDATION_ERROR"
+                                details:
+                                    field: "status"
+                                    message: "Status must be one of: PENDING, APPROVED, REJECTED, SPAM"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    description: Comment not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Comment not found"
+                                code: "NOT_FOUND"
+                                details:
+                                    id: "123e4567-e89b-12d3-a456-426614174000"
+
+    /cms/blog/posts/{postId}/comments:
+        get:
+            tags:
+                - Blog
+            summary: Get post comments
+            description: |
+                Retrieves all comments for a specific blog post.
+                Can be filtered by moderation status.
+
+                **Features:**
+                - Pagination support
+                - Status filtering
+                - Nested replies
+                - User information included
+                - Sorted by creation date (descending)
+
+                **Edge Cases:**
+                - Returns 401 if not authenticated
+                - Returns 404 if post not found
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: postId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Blog post ID
+                - in: query
+                  name: status
+                  schema:
+                      type: string
+                      enum: [PENDING, APPROVED, REJECTED, SPAM]
+                  description: Filter comments by status
+            responses:
+                "200":
+                    description: List of comments for the post
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: "#/components/schemas/BlogComment"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "500":
+                    $ref: "#/components/responses/InternalError"
+
+        post:
+            tags:
+                - Blog
+            summary: Create new comment
+            description: |
+                Creates a new comment on a blog post.
+                Comments can be top-level or replies to existing comments.
+
+                **Features:**
+                - Reply support
+                - Automatic status setting (PENDING)
+                - Content validation
+                - User association
+
+                **Edge Cases:**
+                - Returns 400 if content validation fails
+                - Returns 401 if not authenticated
+                - Returns 404 if post not found
+                - Returns 404 if reply_to comment doesn't exist
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: postId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Blog post ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - content
+                            properties:
+                                content:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 1000
+                                    description: Comment content
+                                reply_to:
+                                    type: string
+                                    format: uuid
+                                    description: ID of the parent comment (for replies)
+            responses:
+                "201":
+                    description: Comment created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogComment"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "500":
+                    $ref: "#/components/responses/InternalError"
+
+    /cms/blog/comments/{id}:
+        put:
+            tags:
+                - Blog
+            summary: Update comment
+            description: |
+                Updates an existing comment.
+                Users can only update their own comments.
+
+                **Features:**
+                - Content validation
+                - Owner verification
+                - Maintains moderation status
+                - Update timestamp tracking
+
+                **Edge Cases:**
+                - Returns 400 if content validation fails
+                - Returns 401 if not authenticated
+                - Returns 403 if not comment owner
+                - Returns 404 if comment not found
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Comment ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - content
+                            properties:
+                                content:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 1000
+                                    description: Updated comment content
+            responses:
+                "200":
+                    description: Comment updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogComment"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "500":
+                    $ref: "#/components/responses/InternalError"
+
+components:
+    schemas:
+        BlogPost:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                category_id:
+                    type: string
+                    format: uuid
+                author_id:
+                    type: string
+                    format: uuid
+                status:
+                    type: string
+                    enum: [DRAFT, PUBLISHED, ARCHIVED]
+                thumbnail_url:
+                    type: string
+                    format: uri
+                cover_url:
+                    type: string
+                    format: uri
+                view_count:
+                    type: integer
+                    description: Number of times the post has been viewed
+                    minimum: 0
+                    example: 150
+                reading_time:
+                    type: integer
+                    description: Estimated reading time in minutes
+                    minimum: 1
+                    example: 5
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/BlogPostTranslation"
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                author:
+                    $ref: "#/components/schemas/Author"
+                category:
+                    $ref: "#/components/schemas/Category"
+
+        BlogPostTranslation:
+            type: object
+            required:
+                - title
+                - content
+                - alias
+                - seo
+            properties:
+                title:
+                    type: string
+                    maxLength: 255
+                content:
+                    type: string
+                alias:
+                    type: string
+                    maxLength: 255
+                seo:
+                    type: object
+                    required:
+                        - title
+                        - description
+                    properties:
+                        title:
+                            type: string
+                            maxLength: 60
+                        description:
+                            type: string
+                            maxLength: 160
+                        keywords:
+                            type: array
+                            items:
+                                type: string
+                        og_title:
+                            type: string
+                            maxLength: 60
+                        og_description:
+                            type: string
+                            maxLength: 160
+                        og_image:
+                            type: string
+                            format: uri
+
+        CreateBlogPostRequest:
+            type: object
+            required:
+                - category_id
+                - translations
+            properties:
+                category_id:
+                    type: string
+                    format: uuid
+                thumbnail_url:
+                    type: string
+                    format: uri
+                cover_url:
+                    type: string
+                    format: uri
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/BlogPostTranslation"
+
+        UpdateBlogPostRequest:
+            type: object
+            properties:
+                category_id:
+                    type: string
+                    format: uuid
+                status:
+                    type: string
+                    enum: [DRAFT, PUBLISHED]
+                thumbnail_url:
+                    type: string
+                    format: uri
+                cover_url:
+                    type: string
+                    format: uri
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/BlogPostTranslation"
+
+        PaginatedBlogPostResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/BlogPost"
+                pagination:
+                    type: object
+                    properties:
+                        total:
+                            type: integer
+                        page:
+                            type: integer
+                        limit:
+                            type: integer
+                        pages:
+                            type: integer
+
+        Error:
+            type: object
+            properties:
+                error:
+                    type: string
+                code:
+                    type: string
+                details:
+                    type: object
+
+        BlogCategory:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/CategoryTranslation"
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+
+        CategoryTranslation:
+            type: object
+            required:
+                - name
+            properties:
+                name:
+                    type: string
+                    maxLength: 255
+                description:
+                    type: string
+                    maxLength: 1000
+
+        CreateCategoryRequest:
+            type: object
+            required:
+                - translations
+            properties:
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/CategoryTranslation"
+
+        UpdateCategoryRequest:
+            type: object
+            required:
+                - translations
+            properties:
+                translations:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/CategoryTranslation"
+
+        PaginatedCategoryResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/BlogCategory"
+                total:
+                    type: integer
+                page:
+                    type: integer
+                limit:
+                    type: integer
+                pages:
+                    type: integer
+
+        BlogComment:
+            type: object
+            required:
+                - id
+                - post_id
+                - user_id
+                - content
+                - status
+                - created_at
+                - updated_at
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                    description: Unique identifier for the comment
+                post_id:
+                    type: string
+                    format: uuid
+                    description: ID of the blog post this comment belongs to
+                user_id:
+                    type: string
+                    format: uuid
+                    description: ID of the user who created the comment
+                reply_to:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: ID of the parent comment (if this is a reply)
+                content:
+                    type: string
+                    description: The comment text content
+                    maxLength: 1000
+                status:
+                    type: string
+                    enum: [PENDING, APPROVED, REJECTED, SPAM]
+                    description: |
+                        Comment moderation status:
+                        - PENDING: Awaiting moderation
+                        - APPROVED: Visible to all users
+                        - REJECTED: Hidden from public view
+                        - SPAM: Marked as spam
+                created_at:
+                    type: string
+                    format: date-time
+                    description: Timestamp when the comment was created
+                updated_at:
+                    type: string
+                    format: date-time
+                    description: Timestamp when the comment was last updated
+                user:
+                    $ref: "#/components/schemas/User"
+                    description: Information about the comment author
+                replies:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/BlogComment"
+                    description: Nested replies to this comment
+            example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                post_id: "123e4567-e89b-12d3-a456-426614174001"
+                user_id: "123e4567-e89b-12d3-a456-426614174002"
+                content: "This is a thoughtful comment about the blog post."
+                status: "APPROVED"
+                created_at: "2024-02-14T08:00:00Z"
+                updated_at: "2024-02-14T08:00:00Z"
+                user:
+                    id: "123e4567-e89b-12d3-a456-426614174002"
+                    name: "John Doe"
+                    email: "john@example.com"
+                replies: []
+
+    responses:
+        Unauthorized:
+            description: Authentication required
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: "Authentication required"
+                        code: "UNAUTHORIZED"
+
+        Forbidden:
+            description: Insufficient permissions
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: "Insufficient permissions"
+                        code: "FORBIDDEN"
+                        details:
+                            message: "This operation requires administrator privileges"
+
+        NotFound:
+            description: Resource not found
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: "Resource not found"
+                        code: "NOT_FOUND"
+                        details:
+                            message: "The requested resource does not exist"
+
+        InternalError:
+            description: Internal server error
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: "Internal server error"
+                        code: "INTERNAL_ERROR"
+                        details:
+                            message: "An error occurred while processing the request"

@@ -1,0 +1,405 @@
+paths:
+    /auth/register:
+        post:
+            summary: Register a new user (Admin only)
+            description: |
+                Creates a new user account in the system. Only administrators can create new users.
+
+                **Key Features:**
+                - Secure password hashing
+                - Role-based access control
+                - Email verification
+                - Welcome email notification
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if no authentication token
+                - Returns 403 if user is not an admin
+                - Returns 409 if email already exists
+            security:
+                - BearerAuth: []
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/RegistrationRequest"
+            responses:
+                "201":
+                    description: User created successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "Registration successful"
+                                    token:
+                                        type: string
+                                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                    user:
+                                        $ref: "#/components/schemas/User"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "403":
+                    description: Forbidden - Insufficient permissions
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "409":
+                    description: Email already exists
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/login:
+        post:
+            summary: Login user
+            description: |
+                Authenticates a user and returns a JWT token.
+
+                **Key Features:**
+                - JWT-based authentication
+                - Secure password verification
+                - Role information in token
+                - Session tracking
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if credentials are invalid
+                - Returns 403 if account is inactive
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LoginRequest"
+            responses:
+                "200":
+                    description: Login successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "Login successful"
+                                    token:
+                                        type: string
+                                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                    user:
+                                        $ref: "#/components/schemas/User"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Invalid credentials
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "403":
+                    description: Account inactive
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/forgot-password:
+        post:
+            summary: Request password reset
+            description: |
+                Initiates the password reset process by sending a reset link to the user's email.
+
+                **Key Features:**
+                - Secure token generation
+                - Email delivery
+                - Token expiration
+                - Rate limiting in production
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 404 if email not found
+                - Returns 429 if too many requests (production only)
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ForgotPasswordRequest"
+            responses:
+                "200":
+                    description: Password reset email sent
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    status:
+                                        type: string
+                                        enum: [success]
+                                        example: "success"
+                                    message:
+                                        type: string
+                                        example: "If your email is registered, you will receive password reset instructions"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/reset-password:
+        post:
+            summary: Reset password using token
+            description: |
+                Resets the user's password using the token received via email.
+
+                **Key Features:**
+                - Token verification
+                - Password validation
+                - Secure password update
+                - Session invalidation
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if token is invalid or expired
+                - Returns 429 if too many attempts (production only)
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ResetPasswordRequest"
+            responses:
+                "200":
+                    description: Password reset successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    status:
+                                        type: string
+                                        enum: [success]
+                                        example: "success"
+                                    message:
+                                        type: string
+                                        example: "Password has been reset successfully"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Invalid or expired token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/logout:
+        post:
+            summary: Logout user
+            description: |
+                Invalidates the current user session.
+
+                **Key Features:**
+                - Token invalidation
+                - Session cleanup
+                - Audit logging
+
+                **Edge Cases:**
+                - Returns 401 if not authenticated
+            security:
+                - BearerAuth: []
+            tags:
+                - Authentication
+            responses:
+                "200":
+                    description: Logout successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    status:
+                                        type: string
+                                        enum: [success]
+                                        example: "success"
+                                    message:
+                                        type: string
+                                        example: "Logged out successfully"
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/verify-email:
+        post:
+            summary: Verify email address
+            description: |
+                Verifies a user's email address using the verification token.
+
+                **Key Features:**
+                - Token verification
+                - Account activation
+                - Status update
+                - Audit logging
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if token is invalid or expired
+                - Returns 404 if user not found
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - token
+                            properties:
+                                token:
+                                    type: string
+                                    description: Email verification token
+                                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            responses:
+                "200":
+                    description: Email verified successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "Email verified successfully"
+                                    user:
+                                        $ref: "#/components/schemas/User"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Invalid or expired token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "404":
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /auth/resend-verification:
+        post:
+            summary: Resend verification email
+            description: |
+                Resends the email verification link to the user's email address.
+
+                **Key Features:**
+                - New token generation
+                - Email delivery
+                - Rate limiting
+                - Audit logging
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 404 if email not found
+                - Returns 409 if email already verified
+                - Returns 429 if too many requests
+            tags:
+                - Authentication
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - email
+                            properties:
+                                email:
+                                    type: string
+                                    format: email
+                                    description: User's email address
+                                    example: "user@example.com"
+            responses:
+                "200":
+                    description: Verification email sent
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "If your email is registered and not verified, you will receive a verification email"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "429":
+                    description: Too many requests
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+components:
+    schemas:
+        VerifyEmailRequest:
+            type: object
+            required:
+                - token
+            properties:
+                token:
+                    type: string
+                    description: Email verification token sent via email
+
+        ResendVerificationRequest:
+            type: object
+            required:
+                - email
+            properties:
+                email:
+                    type: string
+                    format: email
+                    description: Email address to resend verification to

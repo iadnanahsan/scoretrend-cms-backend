@@ -1,0 +1,865 @@
+paths:
+    /cms/pages/{pageId}/sections:
+        get:
+            summary: Get all sections for a page
+            description: |
+                Retrieves all sections for a specific page. This endpoint is publicly accessible.
+
+                **Features:**
+                - Public access (no authentication required)
+                - Language-specific content
+                - Rate limiting applied
+                - Pagination support
+            security: [] # Remove security requirement for GET
+            tags:
+                - Sections
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Filter sections by language
+            responses:
+                "200":
+                    description: List of sections
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: "#/components/schemas/Section"
+                "400":
+                    description: Invalid request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Language parameter is required"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Failed to get sections"
+
+        post:
+            summary: Create new section
+            description: |
+                Creates a new section for a specific page.
+                Only accessible by administrators.
+
+                **Features:**
+                - Section type validation
+                - Order index management
+                - Initial content creation
+                - Multi-language support
+                - Permission validation
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 403 if not admin
+                - Returns 404 if page not found
+                - Returns 409 if order index conflicts
+            security:
+                - BearerAuth: []
+            tags:
+                - Sections
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - type
+                                - order_index
+                            properties:
+                                type:
+                                    type: string
+                                    enum:
+                                        - HERO
+                                        - CONTENT
+                                        - HISTORY
+                                        - TEAM
+                                        - STATISTICS
+                                        - TIMELINE
+                                        - PROGRESS
+                                        - SPORTS_CARD
+                                        - MISSION
+                                        - GRAPH
+                                        - STANDINGS
+                                        - LINEUP
+                                        - FAQ
+                                        - CONTACT
+                                        - PRESENTATION
+                                        - FOOTER
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    description: Position of the section in the page
+            responses:
+                "201":
+                    description: Section created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Section"
+                "400":
+                    description: Invalid request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Invalid section type"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/{pageId}/sections/{sectionId}:
+        get:
+            summary: Get section by ID
+            description: |
+                Retrieves a specific section with its translations. This endpoint is publicly accessible.
+
+                **Features:**
+                - Public access (no authentication required)
+                - Language-specific content
+                - Content type validation
+                - Translation management
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language is invalid
+                - Returns 404 if section not found
+                - Returns 404 if page not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - Sections
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: path
+                  name: sectionId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Section ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Filter translations by language
+            responses:
+                "200":
+                    description: Section details
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Section"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+
+        put:
+            summary: Update section translation
+            description: |
+                Updates section content for a specific language.
+                Validates content based on section type.
+
+                **Features:**
+                - Content type validation
+                - Translation management
+                - Content update notifications
+                - Automatic content formatting
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 404 if section not found
+                - Returns 422 if content type mismatch
+                - Returns 400 if language is invalid
+            security:
+                - BearerAuth: []
+            tags:
+                - Sections
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: path
+                  name: sectionId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Section ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - language
+                                - content
+                            properties:
+                                language:
+                                    type: string
+                                    enum: [en, it, pt, es]
+                                content:
+                                    oneOf:
+                                        - $ref: "#/components/schemas/HeroSectionContent"
+                                        - $ref: "#/components/schemas/MediaSectionContent"
+                                        - $ref: "#/components/schemas/ProgressSectionContent"
+                                        - $ref: "#/components/schemas/TimelineSectionContent"
+                                        - $ref: "#/components/schemas/FAQSectionContent"
+                                        - $ref: "#/components/schemas/TeamSectionContent"
+                                        - $ref: "#/components/schemas/ContactSectionContent"
+            responses:
+                "200":
+                    description: Translation updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SectionTranslation"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "422":
+                    $ref: "#/components/responses/UnprocessableEntity"
+
+        delete:
+            summary: Delete section
+            description: |
+                Deletes a section and all its translations.
+                Only accessible by administrators.
+
+                **Features:**
+                - Cascading deletion
+                - Permission validation
+                - Audit logging
+                - Translation cleanup
+
+                **Edge Cases:**
+                - Returns 403 if not admin
+                - Returns 404 if section not found
+                - Returns 404 if page not found
+            security:
+                - BearerAuth: []
+            tags:
+                - Sections
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: path
+                  name: sectionId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Section ID
+            responses:
+                "204":
+                    description: Section deleted successfully
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/{pageId}/sections/{sectionId}/order:
+        patch:
+            summary: Update section order
+            description: |
+                Updates the order_index of a section.
+                Automatically reorders other sections if needed.
+
+                **Features:**
+                - Automatic reordering
+                - Order validation
+                - Conflict resolution
+                - Transaction support
+
+                **Edge Cases:**
+                - Returns 400 if order_index is invalid
+                - Returns 404 if section not found
+                - Returns 404 if page not found
+                - Returns 409 if order index conflicts
+            security:
+                - BearerAuth: []
+            tags:
+                - Sections
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: path
+                  name: sectionId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Section ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - order_index
+                            properties:
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    description: New position for the section
+            responses:
+                "200":
+                    description: Section order updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Section"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "409":
+                    $ref: "#/components/responses/Conflict"
+
+components:
+    schemas:
+        Section:
+            type: object
+            required:
+                - id
+                - page_id
+                - type
+                - order_index
+                - created_at
+                - updated_at
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                page_id:
+                    type: string
+                    format: uuid
+                type:
+                    type: string
+                    enum:
+                        - HERO
+                        - CONTENT
+                        - HISTORY
+                        - TEAM
+                        - STATISTICS
+                        - TIMELINE
+                        - PROGRESS
+                        - SPORTS_CARD
+                        - MISSION
+                        - GRAPH
+                        - STANDINGS
+                        - LINEUP
+                        - FAQ
+                        - CONTACT
+                        - PRESENTATION
+                        - FOOTER
+                order_index:
+                    type: integer
+                    minimum: 0
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                translations:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/SectionTranslation"
+
+        SectionTranslation:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                section_id:
+                    type: string
+                    format: uuid
+                language:
+                    type: string
+                    minLength: 2
+                    maxLength: 2
+                content:
+                    type: object
+                    description: Section content in JSON format
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+            required:
+                - section_id
+                - language
+                - content
+
+        BaseSectionContent:
+            type: object
+            required:
+                - title
+                - description
+                - order
+            properties:
+                title:
+                    type: string
+                    minLength: 1
+                    maxLength: 100
+                description:
+                    type: string
+                    minLength: 1
+                    maxLength: 5000
+                order:
+                    type: integer
+                    minimum: 0
+
+        HeroSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  required:
+                      - backgroundImage
+                  properties:
+                      backgroundImage:
+                          type: string
+                          format: uri
+                      buttonText:
+                          type: string
+                      buttonUrl:
+                          type: string
+                          format: uri
+
+        MediaSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  required:
+                      - image
+                  properties:
+                      image:
+                          type: object
+                          required:
+                              - url
+                              - alt
+                              - dimensions
+                          properties:
+                              url:
+                                  type: string
+                                  format: uri
+                              alt:
+                                  type: string
+                                  minLength: 1
+                              dimensions:
+                                  type: object
+                                  required:
+                                      - width
+                                      - height
+                                  properties:
+                                      width:
+                                          type: integer
+                                          minimum: 1
+                                      height:
+                                          type: integer
+                                          minimum: 1
+
+        ProgressSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  required:
+                      - items
+                  properties:
+                      items:
+                          type: array
+                          items:
+                              type: object
+                              required:
+                                  - title
+                                  - percentage
+                                  - color
+                              properties:
+                                  title:
+                                      type: string
+                                      minLength: 1
+                                  percentage:
+                                      type: number
+                                      minimum: 0
+                                      maximum: 100
+                                  color:
+                                      type: string
+                                      pattern: "^#[0-9A-Fa-f]{6}$"
+
+        TimelineSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  required:
+                      - items
+                  properties:
+                      items:
+                          type: array
+                          items:
+                              type: object
+                              required:
+                                  - date
+                                  - title
+                                  - description
+                              properties:
+                                  date:
+                                      type: string
+                                  title:
+                                      type: string
+                                      minLength: 1
+                                  description:
+                                      type: string
+                                  image:
+                                      type: object
+                                      properties:
+                                          url:
+                                              type: string
+                                              format: uri
+                                          alt:
+                                              type: string
+
+        FAQSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  required:
+                      - items
+                  properties:
+                      items:
+                          type: array
+                          items:
+                              type: object
+                              required:
+                                  - question
+                                  - answer
+                              properties:
+                                  question:
+                                      type: string
+                                      minLength: 1
+                                  answer:
+                                      type: string
+                                      minLength: 1
+                                  category:
+                                      type: string
+
+        TeamSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  required:
+                      - members
+                  properties:
+                      members:
+                          type: array
+                          items:
+                              type: object
+                              required:
+                                  - name
+                                  - role
+                                  - image
+                              properties:
+                                  name:
+                                      type: string
+                                      minLength: 1
+                                  role:
+                                      type: string
+                                      minLength: 1
+                                  image:
+                                      type: object
+                                      required:
+                                          - url
+                                          - alt
+                                      properties:
+                                          url:
+                                              type: string
+                                              format: uri
+                                          alt:
+                                              type: string
+                                  description:
+                                      type: string
+                                  socialLinks:
+                                      type: array
+                                      items:
+                                          type: object
+                                          required:
+                                              - platform
+                                              - url
+                                          properties:
+                                              platform:
+                                                  type: string
+                                              url:
+                                                  type: string
+                                                  format: uri
+
+        ContactSectionContent:
+            allOf:
+                - $ref: "#/components/schemas/BaseSectionContent"
+                - type: object
+                  properties:
+                      address:
+                          type: string
+                      email:
+                          type: string
+                          format: email
+                      phone:
+                          type: string
+                      mapCoordinates:
+                          type: object
+                          required:
+                              - lat
+                              - lng
+                          properties:
+                              lat:
+                                  type: number
+                              lng:
+                                  type: number
+
+    responses:
+        ValidationError:
+            description: Validation failed
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+                            code:
+                                type: string
+                                enum: [VALIDATION_ERROR]
+                            details:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        field:
+                                            type: string
+                                        message:
+                                            type: string
+                        examples:
+                            contentValidation:
+                                value:
+                                    error: "Validation failed"
+                                    code: "VALIDATION_ERROR"
+                                    details:
+                                        - field: "title"
+                                          message: "Title cannot exceed 100 characters"
+                                        - field: "description"
+                                          message: "Description is required"
+                            languageValidation:
+                                value:
+                                    error: "Validation failed"
+                                    code: "VALIDATION_ERROR"
+                                    details:
+                                        - field: "language"
+                                          message: "Unsupported language"
+
+        Unauthorized:
+            description: Authentication required
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+
+        Forbidden:
+            description: Permission denied
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+
+        NotFound:
+            description: Resource not found
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+
+        UnprocessableEntity:
+            description: Content type validation error
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+                            code:
+                                type: string
+                                enum: [CONTENT_TYPE_ERROR, VALIDATION_ERROR]
+                            details:
+                                oneOf:
+                                    - type: object
+                                      properties:
+                                          expected:
+                                              type: string
+                                          received:
+                                              type: string
+                                    - type: array
+                                      items:
+                                          type: object
+                                          properties:
+                                              field:
+                                                  type: string
+                                              message:
+                                                  type: string
+
+        Conflict:
+            description: Resource conflict
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+                            code:
+                                type: string
+                                enum: [CONFLICT]
+                            details:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                        examples:
+                            orderConflict:
+                                value:
+                                    error: "Order index conflict"
+                                    code: "CONFLICT"
+                                    details:
+                                        message: "Section with this order index already exists"
+
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: |
+                JWT token for authentication.
+                Required for all section management endpoints.
+                Token must be included in the Authorization header.
+
+    parameters:
+        languageParam:
+            in: query
+            name: language
+            schema:
+                type: string
+                enum: [en, it, pt, es]
+            required: false
+            description: Filter content by language
+        pageIdParam:
+            in: path
+            name: pageId
+            schema:
+                type: string
+                format: uuid
+            required: true
+            description: ID of the page containing the sections
+        sectionIdParam:
+            in: path
+            name: sectionId
+            schema:
+                type: string
+                format: uuid
+            required: true
+            description: ID of the section to operate on

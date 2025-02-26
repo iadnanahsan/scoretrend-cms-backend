@@ -1,0 +1,1918 @@
+{
+	"info": {
+		"name": "ScoreTrend CMS API",
+		"description": "API collection for ScoreTrend CMS Backend",
+		"version": "1.0.0",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "Authentication endpoints",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"StrongP@ss123\",\n    \"role\": \"AUTHOR\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"StrongP@ss123\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "forgot-password"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john@example.com\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "reset-password"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"reset_token_here\",\n    \"password\": \"NewStrongP@ss123\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Section Management",
+			"description": "Section management endpoints for page content",
+			"item": [
+				{
+					"name": "Get All Sections",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections?language={{language}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", "{{page_id}}", "sections"],
+							"query": [
+								{
+									"key": "language",
+									"value": "{{language}}",
+									"description": "Required. Language code (en, it, pt, es)",
+									"required": true
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections?language=en"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "[\n    {\n        \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n        \"page_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n        \"type\": \"HERO\",\n        \"order_index\": 0,\n        \"created_at\": \"2025-02-13T02:30:00Z\",\n        \"updated_at\": \"2025-02-13T02:30:00Z\",\n        \"translations\": [\n            {\n                \"id\": \"123e4567-e89b-12d3-a456-426614174002\",\n                \"section_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n                \"language\": \"en\",\n                \"content\": {\n                    \"title\": \"Welcome to ScoreTrend\",\n                    \"description\": \"Your premier sports analytics platform\",\n                    \"order\": 0\n                },\n                \"raw_content\": \"# Welcome to ScoreTrend\\n\\nYour premier sports analytics platform\",\n                \"html_content\": \"<h1>Welcome to ScoreTrend</h1><p>Your premier sports analytics platform</p>\",\n                \"created_at\": \"2025-02-13T02:30:00Z\",\n                \"updated_at\": \"2025-02-13T02:30:00Z\"\n            }\n        ]\n    }\n]"
+							}
+						},
+						{
+							"name": "Language Required",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Language parameter is required\"\n}"
+							}
+						},
+						{
+							"name": "Invalid Language",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections?language=invalid"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Unsupported language: invalid\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Section",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", "{{page_id}}", "sections"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"HERO\",\n    \"order_index\": 0\n}"
+						}
+					},
+					"response": [
+						{
+							"name": "Created",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections"
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"page_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n    \"type\": \"HERO\",\n    \"order_index\": 0,\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\",\n    \"translations\": []\n}"
+							}
+						},
+						{
+							"name": "Invalid Type",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid section type\"\n}"
+							}
+						},
+						{
+							"name": "Order Index Conflict",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections"
+								}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Order index conflict\",\n    \"code\": \"CONFLICT\",\n    \"details\": {\n        \"message\": \"Section with this order index already exists\"\n    }\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Section Translation",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"language\": \"en\",\n    \"content\": {\n        \"title\": \"Welcome to ScoreTrend\",\n        \"description\": \"Your premier sports analytics platform\",\n        \"order\": 0,\n        \"backgroundImage\": \"/images/sections/hero/example.webp\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/cms/sections/:sectionId/translations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "cms", "sections", ":sectionId", "translations"],
+							"variable": [
+								{
+									"key": "sectionId",
+									"value": "{{sectionId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Section",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections/{{section_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", "{{page_id}}", "sections", "{{section_id}}"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections/{{section_id}}"
+								}
+							},
+							"status": "No Content",
+							"code": 204
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections/{{section_id}}"
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Section not found\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Section Order",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections/{{section_id}}/order",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", "{{page_id}}", "sections", "{{section_id}}", "order"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order_index\": 2\n}"
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "PATCH",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections/{{section_id}}/order"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"page_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n    \"type\": \"HERO\",\n    \"order_index\": 2,\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\",\n    \"translations\": []\n}"
+							}
+						},
+						{
+							"name": "Invalid Order Index",
+							"originalRequest": {
+								"method": "PATCH",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{page_id}}/sections/{{section_id}}/order"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid order index\"\n}"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Blog Management",
+			"description": "Blog post and comment management endpoints",
+			"item": [
+				{
+					"name": "List Blog Posts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts?page=1&limit=10&language=en",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "language",
+									"value": "en"
+								},
+								{
+									"key": "category_id",
+									"value": "{{category_id}}",
+									"disabled": true
+								},
+								{
+									"key": "author_id",
+									"value": "{{author_id}}",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "PUBLISHED",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Blog Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"category_id\": \"{{category_id}}\",\n    \"thumbnail_url\": \"https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp\",\n    \"cover_url\": \"https://storage.googleapis.com/scoretrend/blog/covers/example.webp\",\n    \"translations\": {\n        \"en\": {\n            \"title\": \"Example Blog Post\",\n            \"content\": \"This is an example blog post content.\",\n            \"alias\": \"example-blog-post\",\n            \"seo\": {\n                \"title\": \"Example Blog Post - ScoreTrend\",\n                \"description\": \"This is an example blog post for ScoreTrend CMS.\",\n                \"keywords\": [\"example\", \"blog\", \"scoretrend\"],\n                \"og_title\": \"Example Blog Post - ScoreTrend\",\n                \"og_description\": \"This is an example blog post for ScoreTrend CMS.\",\n                \"og_image\": \"https://storage.googleapis.com/scoretrend/blog/covers/example.webp\"\n            }\n        }\n    }\n}"
+						}
+					}
+				},
+				{
+					"name": "Get Blog Post",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts/{{post_id}}?language=en",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts", "{{post_id}}"],
+							"query": [
+								{
+									"key": "language",
+									"value": "en"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Blog Post",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts/{{post_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts", "{{post_id}}"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"PUBLISHED\",\n    \"translations\": {\n        \"en\": {\n            \"title\": \"Updated Blog Post\",\n            \"content\": \"This is an updated blog post content.\",\n            \"alias\": \"updated-blog-post\",\n            \"seo\": {\n                \"title\": \"Updated Blog Post - ScoreTrend\",\n                \"description\": \"This is an updated blog post for ScoreTrend CMS.\",\n                \"keywords\": [\"updated\", \"blog\", \"scoretrend\"],\n                \"og_title\": \"Updated Blog Post - ScoreTrend\",\n                \"og_description\": \"This is an updated blog post for ScoreTrend CMS.\",\n                \"og_image\": \"https://storage.googleapis.com/scoretrend/blog/covers/example.webp\"\n            }\n        }\n    }\n}"
+						}
+					}
+				},
+				{
+					"name": "Delete Blog Post",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts/{{post_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts", "{{post_id}}"]
+						}
+					}
+				},
+				{
+					"name": "List Post Comments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts/{{post_id}}/comments",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts", "{{post_id}}", "comments"]
+						}
+					}
+				},
+				{
+					"name": "Create Comment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/posts/{{post_id}}/comments",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "posts", "{{post_id}}", "comments"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"content\": \"This is a comment.\",\n    \"reply_to\": \"{{comment_id}}\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Update Comment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/comments/{{comment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "comments", "{{comment_id}}"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"content\": \"This is an updated comment.\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Moderate Comment",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/comments/{{comment_id}}/moderate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "comments", "{{comment_id}}", "moderate"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"APPROVED\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/comments/{{comment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "comments", "{{comment_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "User Management",
+			"description": "User management endpoints including profile, status, and role management",
+			"item": [
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "profile"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\",\n    \"bio\": \"Updated bio information\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/change-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "change-password"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentPassword\": \"CurrentP@ss123\",\n    \"newPassword\": \"NewP@ss123\"\n}"
+						}
+					}
+				},
+				{
+					"name": "List Users (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users?page=1&limit=10&role=AUTHOR&status=ACTIVE",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "role",
+									"value": "AUTHOR"
+								},
+								{
+									"key": "status",
+									"value": "ACTIVE"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update User Role (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/role",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "role"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role\": \"AUTHOR\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Update User Status (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "status"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"INACTIVE\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Delete User (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Verify Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify-email",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "verify-email"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"verification_token_here\"\n}"
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/auth/verify-email"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"message\": \"Email verified successfully\",\n    \"user\": {\n        \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n        \"email\": \"john@example.com\",\n        \"name\": \"John Doe\",\n        \"role\": \"AUTHOR\",\n        \"status\": \"ACTIVE\",\n        \"email_verified\": true,\n        \"email_verified_at\": \"2025-02-13T02:30:00Z\",\n        \"created_at\": \"2025-02-13T02:30:00Z\",\n        \"updated_at\": \"2025-02-13T02:30:00Z\"\n    }\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Resend Verification Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/resend-verification",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "resend-verification"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john@example.com\"\n}"
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/auth/resend-verification"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"message\": \"If your email is registered and not verified, you will receive a verification email\"\n}"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Pages Management",
+			"description": "Page content management endpoints with multi-language support and SEO optimization",
+			"item": [
+				{
+					"name": "Initialize Fixed Pages",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/initialize",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", "initialize"]
+						},
+						"description": "Creates all predefined pages in the system. Admin only operation. Safe to call multiple times (idempotent)."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/initialize"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"message\": \"Fixed pages initialized successfully\"\n}"
+							}
+						},
+						{
+							"name": "Unauthorized",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/initialize"
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Authentication required\"\n}"
+							}
+						},
+						{
+							"name": "Forbidden",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/initialize"
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Insufficient permissions\",\n    \"details\": \"Admin role required\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Page Content",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/{{pageType}}?language={{language}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", "{{pageType}}"],
+							"query": [
+								{
+									"key": "language",
+									"value": "{{language}}",
+									"description": "Language code (en, it, pt, es)"
+								}
+							],
+							"variable": [
+								{
+									"key": "pageType",
+									"value": "{{pageType}}",
+									"description": "Type of page (HOME, ABOUT, HOW_IT_WORKS, etc.)"
+								}
+							]
+						},
+						"description": "Retrieves page content with translations and sections for a specific page type and language."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{pageType}}?language={{language}}"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"type\": \"ABOUT\",\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\",\n    \"translations\": [\n        {\n            \"id\": \"123e4567-e89b-12d3-a456-426614174001\",\n            \"page_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n            \"language\": \"en\",\n            \"alias\": \"about-us\",\n            \"seo_data\": {\n                \"basics\": {\n                    \"title\": \"About Us - ScoreTrend\",\n                    \"description\": \"Learn about ScoreTrend's mission and team\",\n                    \"canonical_url\": \"https://scoretrend.com/about\"\n                },\n                \"openGraph\": {\n                    \"title\": \"About ScoreTrend\",\n                    \"description\": \"Your premier sports analytics platform\",\n                    \"type\": \"website\",\n                    \"image\": \"https://scoretrend.com/images/about-og.jpg\"\n                },\n                \"twitter\": {\n                    \"card\": \"summary_large_image\",\n                    \"title\": \"About ScoreTrend\",\n                    \"description\": \"Your premier sports analytics platform\",\n                    \"image\": \"https://scoretrend.com/images/about-twitter.jpg\"\n                }\n            },\n            \"created_at\": \"2025-02-13T02:30:00Z\"\n        }\n    ],\n    \"sections\": [\n        {\n            \"id\": \"123e4567-e89b-12d3-a456-426614174002\",\n            \"page_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n            \"type\": \"HERO\",\n            \"order_index\": 0,\n            \"created_at\": \"2025-02-13T02:30:00Z\",\n            \"translations\": [\n                {\n                    \"id\": \"123e4567-e89b-12d3-a456-426614174003\",\n                    \"section_id\": \"123e4567-e89b-12d3-a456-426614174002\",\n                    \"language\": \"en\",\n                    \"content\": {\n                        \"title\": \"Welcome to ScoreTrend\",\n                        \"description\": \"Your premier sports analytics platform\",\n                        \"backgroundImage\": \"https://storage.googleapis.com/scoretrend/hero.jpg\"\n                    },\n                    \"created_at\": \"2025-02-13T02:30:00Z\",\n                    \"updated_at\": \"2025-02-13T02:30:00Z\"\n                }\n            ]\n        }\n    ]\n}"
+							}
+						},
+						{
+							"name": "Invalid Page Type",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/INVALID?language={{language}}"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid page type\"\n}"
+							}
+						},
+						{
+							"name": "Invalid Language",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/{{pageType}}?language=invalid"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Unsupported language: invalid\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Page Translation",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/:pageType/translations/:lang",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", ":pageType", "translations", ":lang"],
+							"variable": [
+								{
+									"key": "pageType",
+									"value": "{{pageType}}",
+									"description": "Type of page (HOME, ABOUT, HOW_IT_WORKS, etc.)"
+								},
+								{
+									"key": "lang",
+									"value": "{{language}}",
+									"description": "Language code (en, it, pt, es)"
+								}
+							]
+						},
+						"description": "Retrieves page content for a specific language. Includes translations and sections."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/ABOUT/translations/en"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"type\": \"ABOUT\",\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\",\n    \"translations\": [\n        {\n            \"id\": \"123e4567-e89b-12d3-a456-426614174001\",\n            \"page_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n            \"language\": \"en\",\n            \"alias\": \"about-us\",\n            \"seo_data\": {\n                \"basics\": {\n                    \"title\": \"About Us - ScoreTrend\",\n                    \"description\": \"Learn about ScoreTrend's mission and team\"\n                },\n                \"openGraph\": {\n                    \"title\": \"About ScoreTrend\",\n                    \"description\": \"Your premier sports analytics platform\",\n                    \"type\": \"website\"\n                },\n                \"twitter\": {\n                    \"card\": \"summary\",\n                    \"title\": \"About ScoreTrend\",\n                    \"description\": \"Your premier sports analytics platform\"\n                }\n            },\n            \"created_at\": \"2025-02-13T02:30:00Z\"\n        }\n    ],\n    \"sections\": []\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Page Translation",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/:pageId/translations/:lang",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", ":pageId", "translations", ":lang"],
+							"variable": [
+								{
+									"key": "pageId",
+									"value": "{{page_id}}",
+									"description": "UUID of the page"
+								},
+								{
+									"key": "lang",
+									"value": "{{language}}",
+									"description": "Language code (en, it, pt, es)"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"alias\": \"about-us\",\n    \"seo_data\": {\n        \"basics\": {\n            \"title\": \"About Us - ScoreTrend\",\n            \"description\": \"Learn about ScoreTrend's mission and team\",\n            \"canonical_url\": \"https://scoretrend.com/about\"\n        },\n        \"openGraph\": {\n            \"title\": \"About ScoreTrend\",\n            \"description\": \"Your premier sports analytics platform\",\n            \"type\": \"website\",\n            \"image\": \"https://scoretrend.com/images/about-og.jpg\"\n        },\n        \"twitter\": {\n            \"card\": \"summary_large_image\",\n            \"title\": \"About ScoreTrend\",\n            \"description\": \"Your premier sports analytics platform\",\n            \"image\": \"https://scoretrend.com/images/about-twitter.jpg\"\n        }\n    }\n}"
+						},
+						"description": "Updates page translation for a specific language. Admin only operation."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "PUT",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/123e4567-e89b-12d3-a456-426614174000/translations/en"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174001\",\n    \"page_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"language\": \"en\",\n    \"alias\": \"about-us\",\n    \"seo_data\": {\n        \"basics\": {\n            \"title\": \"About Us - ScoreTrend\",\n            \"description\": \"Learn about ScoreTrend's mission and team\",\n            \"canonical_url\": \"https://scoretrend.com/about\"\n        },\n        \"openGraph\": {\n            \"title\": \"About ScoreTrend\",\n            \"description\": \"Your premier sports analytics platform\",\n            \"type\": \"website\",\n            \"image\": \"https://scoretrend.com/images/about-og.jpg\"\n        },\n        \"twitter\": {\n            \"card\": \"summary_large_image\",\n            \"title\": \"About ScoreTrend\",\n            \"description\": \"Your premier sports analytics platform\",\n            \"image\": \"https://scoretrend.com/images/about-twitter.jpg\"\n        }\n    },\n    \"created_at\": \"2025-02-13T02:30:00Z\"\n}"
+							}
+						},
+						{
+							"name": "Validation Error",
+							"originalRequest": {
+								"method": "PUT",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/123e4567-e89b-12d3-a456-426614174000/translations/en"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Validation failed\",\n    \"details\": {\n        \"field\": \"seo_data.basics.title\",\n        \"message\": \"Title cannot exceed 60 characters\"\n    }\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Page SEO",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/:pageId/seo?language={{language}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", ":pageId", "seo"],
+							"query": [
+								{
+									"key": "language",
+									"value": "{{language}}",
+									"description": "Language code (en, it, pt, es)"
+								}
+							],
+							"variable": [
+								{
+									"key": "pageId",
+									"value": "{{page_id}}",
+									"description": "UUID of the page"
+								}
+							]
+						},
+						"description": "Retrieves SEO metadata for a specific page in the requested language."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/123e4567-e89b-12d3-a456-426614174000/seo?language=en"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"basics\": {\n        \"title\": \"About Us - ScoreTrend\",\n        \"description\": \"Learn about ScoreTrend's mission and team\",\n        \"canonical_url\": \"https://scoretrend.com/about\"\n    },\n    \"openGraph\": {\n        \"title\": \"About ScoreTrend\",\n        \"description\": \"Your premier sports analytics platform\",\n        \"type\": \"website\",\n        \"image\": \"https://scoretrend.com/images/about-og.jpg\"\n    },\n    \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": \"About ScoreTrend\",\n        \"description\": \"Your premier sports analytics platform\",\n        \"image\": \"https://scoretrend.com/images/about-twitter.jpg\"\n    }\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Page SEO",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/pages/:pageId/seo?language={{language}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "pages", ":pageId", "seo"],
+							"query": [
+								{
+									"key": "language",
+									"value": "{{language}}",
+									"description": "Language code (en, it, pt, es)"
+								}
+							],
+							"variable": [
+								{
+									"key": "pageId",
+									"value": "{{page_id}}",
+									"description": "UUID of the page"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"basics\": {\n        \"title\": \"About Us - ScoreTrend\",\n        \"description\": \"Learn about ScoreTrend's mission and team\",\n        \"canonical_url\": \"https://scoretrend.com/about\"\n    },\n    \"openGraph\": {\n        \"title\": \"About ScoreTrend\",\n        \"description\": \"Your premier sports analytics platform\",\n        \"type\": \"website\",\n        \"image\": \"https://scoretrend.com/images/about-og.jpg\"\n    },\n    \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": \"About ScoreTrend\",\n        \"description\": \"Your premier sports analytics platform\",\n        \"image\": \"https://scoretrend.com/images/about-twitter.jpg\"\n    }\n}"
+						},
+						"description": "Updates SEO metadata for a specific page in the specified language. Admin only operation."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "PUT",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/123e4567-e89b-12d3-a456-426614174000/seo?language=en"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174001\",\n    \"page_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"language\": \"en\",\n    \"alias\": \"about-us\",\n    \"seo_data\": {\n        \"basics\": {\n            \"title\": \"About Us - ScoreTrend\",\n            \"description\": \"Learn about ScoreTrend's mission and team\",\n            \"canonical_url\": \"https://scoretrend.com/about\"\n        },\n        \"openGraph\": {\n            \"title\": \"About ScoreTrend\",\n            \"description\": \"Your premier sports analytics platform\",\n            \"type\": \"website\",\n            \"image\": \"https://scoretrend.com/images/about-og.jpg\"\n        },\n        \"twitter\": {\n            \"card\": \"summary_large_image\",\n            \"title\": \"About ScoreTrend\",\n            \"description\": \"Your premier sports analytics platform\",\n            \"image\": \"https://scoretrend.com/images/about-twitter.jpg\"\n        }\n    },\n    \"created_at\": \"2025-02-13T02:30:00Z\"\n}"
+							}
+						},
+						{
+							"name": "Validation Error",
+							"originalRequest": {
+								"method": "PUT",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/pages/123e4567-e89b-12d3-a456-426614174000/seo?language=en"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Validation failed\",\n    \"details\": {\n        \"field\": \"basics.title\",\n        \"message\": \"Title cannot exceed 60 characters\"\n    }\n}"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Media Management",
+			"description": "Media upload and management endpoints",
+			"item": [
+				{
+					"name": "Upload Media",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"description": "Image file (JPEG, PNG, WebP, GIF)"
+								},
+								{
+									"key": "type",
+									"value": "blog_thumbnail",
+									"description": "Media type (blog_thumbnail, blog_cover, section_hero, section_content, author_profile)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/media/upload",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "media", "upload"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/upload"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"url\": \"https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp\",\n    \"dimensions\": {\n        \"width\": 300,\n        \"height\": 300\n    },\n    \"size\": 102400,\n    \"format\": \"webp\",\n    \"type\": \"blog_thumbnail\",\n    \"created_at\": \"2025-02-13T02:30:00Z\"\n}"
+							}
+						},
+						{
+							"name": "Invalid File Type",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/upload"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid file type\",\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": {\n        \"message\": \"Allowed types: image/jpeg, image/png, image/webp, image/gif\"\n    }\n}"
+							}
+						},
+						{
+							"name": "Size Exceeded",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/upload"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"File size exceeded\",\n    \"code\": \"FILE_SIZE_ERROR\",\n    \"details\": {\n        \"message\": \"Maximum file size for blog_thumbnail is 500KB\"\n    }\n}"
+							}
+						},
+						{
+							"name": "Invalid Dimensions",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/upload"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid dimensions\",\n    \"code\": \"DIMENSION_ERROR\",\n    \"details\": {\n        \"message\": \"Blog thumbnail must be 300x300px\"\n    }\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete Media",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/media/delete?url={{encoded_url}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "media", "delete"],
+							"query": [
+								{
+									"key": "url",
+									"value": "{{encoded_url}}",
+									"description": "URL-encoded Google Cloud Storage URL",
+									"required": true
+								}
+							]
+						},
+						"description": "Deletes a media file from storage. The URL must be provided as a query parameter and must be URL-encoded.\n\nExample URL before encoding:\nhttps://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp\n\nExample encoded URL:\nhttps%3A%2F%2Fstorage.googleapis.com%2Fscoretrend%2Fblog%2Fthumbnails%2Fexample.webp"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/delete?url=https%3A%2F%2Fstorage.googleapis.com%2Fscoretrend%2Fblog%2Fthumbnails%2Fexample.webp"
+								}
+							},
+							"status": "No Content",
+							"code": 204
+						},
+						{
+							"name": "Missing URL",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/delete"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"URL parameter is required\",\n    \"details\": \"Provide the full Google Cloud Storage URL as a query parameter 'url'\",\n    \"example\": \"/api/v1/cms/media/delete?url=https%3A%2F%2Fstorage.googleapis.com%2Fscoretrend%2Fblog%2Fthumbnails%2Fexample.webp\"\n}"
+							}
+						},
+						{
+							"name": "Invalid URL",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/delete?url=invalid-url"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid file URL\",\n    \"details\": \"URL must be a valid Google Cloud Storage URL from the ScoreTrend bucket with a supported image extension (.jpg, .jpeg, .png, .webp, .gif)\",\n    \"example\": \"https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp\"\n}"
+							}
+						},
+						{
+							"name": "Invalid Encoding",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/media/delete?url=https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"error\": \"Invalid URL encoding\",\n    \"details\": \"The URL must be properly URL-encoded\",\n    \"example\": \"https%3A%2F%2Fstorage.googleapis.com%2Fscoretrend%2Fblog%2Fthumbnails%2Fexample.webp\"\n}"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Author Management",
+			"description": "Author details management endpoints",
+			"item": [
+				{
+					"name": "Get Current Author Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/authors/me?language={{language}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "authors", "me"],
+							"query": [
+								{
+									"key": "language",
+									"value": "{{language}}",
+									"description": "Language code (en, it, pt, es)",
+									"required": true
+								}
+							]
+						},
+						"description": "Retrieves the author details for the currently authenticated user."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/authors/me?language=en"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"user_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n    \"profile_image_url\": \"https://storage.googleapis.com/scoretrend/authors/profile.webp\",\n    \"created_at\": \"2025-02-13T14:00:00Z\",\n    \"updated_at\": \"2025-02-13T14:00:00Z\",\n    \"translations\": [\n        {\n            \"id\": \"123e4567-e89b-12d3-a456-426614174002\",\n            \"author_detail_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n            \"language\": \"en\",\n            \"name\": \"John Doe\",\n            \"description\": \"Sports journalist and analyst\"\n        }\n    ],\n    \"user\": {\n        \"id\": \"123e4567-e89b-12d3-a456-426614174001\",\n        \"email\": \"john@example.com\",\n        \"name\": \"John Doe\",\n        \"role\": \"AUTHOR\"\n    }\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Current Author Details",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/authors/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "authors", "me"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"profile_image_url\": \"https://storage.googleapis.com/scoretrend/authors/updated-profile.webp\",\n    \"translations\": {\n        \"en\": {\n            \"name\": \"John Doe Updated\",\n            \"description\": \"Senior sports journalist and analyst\"\n        }\n    }\n}"
+						},
+						"description": "Updates the author details for the currently authenticated user."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PUT",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/authors/me"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"user_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n    \"profile_image_url\": \"https://storage.googleapis.com/scoretrend/authors/updated-profile.webp\",\n    \"created_at\": \"2025-02-13T14:00:00Z\",\n    \"updated_at\": \"2025-02-13T14:30:00Z\",\n    \"translations\": [\n        {\n            \"id\": \"123e4567-e89b-12d3-a456-426614174002\",\n            \"author_detail_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n            \"language\": \"en\",\n            \"name\": \"John Doe Updated\",\n            \"description\": \"Senior sports journalist and analyst\"\n        }\n    ]\n}"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "SEO",
+			"description": "SEO optimization endpoints",
+			"item": [
+				{
+					"name": "Get Sitemap",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/sitemap.xml",
+							"host": ["{{base_url}}"],
+							"path": ["sitemap.xml"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/sitemap.xml"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/xml"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "public, max-age=3600"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n       xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n    <url>\n        <loc>https://scoretrend.com/about</loc>\n        <lastmod>2024-03-15T07:30:00+07:00</lastmod>\n        <xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"https://scoretrend.com/en/about\"/>\n        <xhtml:link rel=\"alternate\" hreflang=\"id\" href=\"https://scoretrend.com/id/about\"/>\n    </url>\n    <url>\n        <loc>https://scoretrend.com/blog/latest-football-news</loc>\n        <lastmod>2024-03-15T08:45:00+07:00</lastmod>\n        <xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"https://scoretrend.com/en/blog/latest-football-news\"/>\n        <xhtml:link rel=\"alternate\" hreflang=\"id\" href=\"https://scoretrend.com/id/blog/berita-sepakbola-terbaru\"/>\n    </url>\n</urlset>"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Robots.txt",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/robots.txt",
+							"host": ["{{base_url}}"],
+							"path": ["robots.txt"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/robots.txt"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "public, max-age=86400"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\n\nSitemap: https://scoretrend.com/sitemap.xml"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Blog Categories",
+			"description": "Blog category management endpoints",
+			"item": [
+				{
+					"name": "List Categories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/categories?page=1&limit=10&language=en",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "categories"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"description": "Filter by language"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/blog/categories"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"items\": [\n        {\n            \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n            \"translations\": {\n                \"en\": {\n                    \"name\": \"Football News\",\n                    \"description\": \"Latest football news and updates\"\n                },\n                \"es\": {\n                    \"name\": \"Noticias de Fútbol\",\n                    \"description\": \"Últimas noticias y actualizaciones de fútbol\"\n                }\n            },\n            \"created_at\": \"2025-02-13T02:30:00Z\",\n            \"updated_at\": \"2025-02-13T02:30:00Z\"\n        }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 10,\n    \"pages\": 1\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "categories"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"translations\": {\n        \"en\": {\n            \"name\": \"Football News\",\n            \"description\": \"Latest football news and updates\"\n        },\n        \"es\": {\n            \"name\": \"Noticias de Fútbol\",\n            \"description\": \"Últimas noticias y actualizaciones de fútbol\"\n        }\n    }\n}"
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/blog/categories"
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"translations\": {\n        \"en\": {\n            \"name\": \"Football News\",\n            \"description\": \"Latest football news and updates\"\n        },\n        \"es\": {\n            \"name\": \"Noticias de Fútbol\",\n            \"description\": \"Últimas noticias y actualizaciones de fútbol\"\n        }\n    },\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/categories/{{category_id}}?language=en",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "categories", "{{category_id}}"],
+							"query": [
+								{
+									"key": "language",
+									"value": "en",
+									"description": "Filter by language"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/blog/categories/{{category_id}}"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"translations\": {\n        \"en\": {\n            \"name\": \"Football News\",\n            \"description\": \"Latest football news and updates\"\n        }\n    },\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/categories/{{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "categories", "{{category_id}}"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"translations\": {\n        \"en\": {\n            \"name\": \"Updated Football News\",\n            \"description\": \"Updated football news and updates\"\n        },\n        \"es\": {\n            \"name\": \"Noticias de Fútbol Actualizadas\",\n            \"description\": \"Noticias y actualizaciones de fútbol actualizadas\"\n        }\n    }\n}"
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PUT",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/blog/categories/{{category_id}}"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"translations\": {\n        \"en\": {\n            \"name\": \"Updated Football News\",\n            \"description\": \"Updated football news and updates\"\n        },\n        \"es\": {\n            \"name\": \"Noticias de Fútbol Actualizadas\",\n            \"description\": \"Noticias y actualizaciones de fútbol actualizadas\"\n        }\n    },\n    \"created_at\": \"2025-02-13T02:30:00Z\",\n    \"updated_at\": \"2025-02-13T02:30:00Z\"\n}"
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cms/blog/categories/{{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cms", "blog", "categories", "{{category_id}}"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"url": {
+									"raw": "{{base_url}}/api/v1/cms/blog/categories/{{category_id}}"
+								}
+							},
+							"status": "No Content",
+							"code": 204
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3001"
+		},
+		{
+			"key": "page_id",
+			"value": "123e4567-e89b-12d3-a456-426614174001"
+		},
+		{
+			"key": "section_id",
+			"value": "123e4567-e89b-12d3-a456-426614174000"
+		},
+		{
+			"key": "category_id",
+			"value": "123e4567-e89b-12d3-a456-426614174000"
+		},
+		{
+			"key": "post_id",
+			"value": "123e4567-e89b-12d3-a456-426614174001"
+		},
+		{
+			"key": "comment_id",
+			"value": "123e4567-e89b-12d3-a456-426614174002"
+		},
+		{
+			"key": "encoded_url",
+			"value": "https%3A%2F%2Fstorage.googleapis.com%2Fscoretrend%2Fblog%2Fthumbnails%2Fexample.webp"
+		},
+		{
+			"key": "author_id",
+			"value": "123e4567-e89b-12d3-a456-426614174000"
+		}
+	]
+}

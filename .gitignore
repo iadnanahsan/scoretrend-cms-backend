@@ -1,0 +1,23 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+# Logs
+logs/
+*.log
+
+# Credentials
+src/config/credentials/
+**/credentials/
+
+# Build files
+dist/
+
+# IDE files
+.vscode/
+.idea/
+.cursor/
+
+# OS files
+.DS_Store
+Thumbs.db

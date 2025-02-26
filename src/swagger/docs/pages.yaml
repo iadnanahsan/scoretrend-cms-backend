@@ -1,0 +1,473 @@
+paths:
+    /cms/pages/{pageType}:
+        get:
+            summary: Get page content
+            description: |
+                Retrieves page content with translations and sections.
+                This endpoint is publicly accessible.
+
+                **Key Features:**
+                - Public access (no authentication required)
+                - Returns page structure
+                - Includes translations
+                - Includes sections
+                - Language-specific content
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language not specified
+                - Returns 400 if invalid page type
+                - Returns 404 if page not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: pageType
+                  required: true
+                  schema:
+                      type: string
+                      enum: [HOME, ABOUT, HOW_IT_WORKS, CONTACT, FAQ, NEWS, PRIVACY_POLICY, COOKIE_POLICY]
+                  description: Type of the page to retrieve
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language for content
+            responses:
+                "200":
+                    description: Page content retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Page"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/{pageType}/translations/{lang}:
+        get:
+            summary: Get page content in specific language
+            description: |
+                Retrieves page content for a specific language.
+                This endpoint is publicly accessible.
+
+                **Key Features:**
+                - Public access (no authentication required)
+                - Includes translations and sections
+                - Language-specific content
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if invalid page type
+                - Returns 404 if page not found
+                - Returns 404 if translation not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: pageType
+                  required: true
+                  schema:
+                      type: string
+                      enum: [HOME, ABOUT, HOW_IT_WORKS, CONTACT, FAQ, NEWS, PRIVACY_POLICY, COOKIE_POLICY]
+                  description: Type of the page to retrieve
+                - in: path
+                  name: lang
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code
+            responses:
+                "200":
+                    description: Page translation retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Page"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/{pageId}/translations/{lang}:
+        put:
+            summary: Update page translation
+            description: |
+                Updates page translation for a specific language.
+                Only accessible by administrators.
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 404 if page not found
+                - Returns 403 if not admin
+            security:
+                - BearerAuth: []
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: path
+                  name: lang
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - alias
+                                - seo_data
+                            properties:
+                                alias:
+                                    type: string
+                                    example: "about-us"
+                                seo_data:
+                                    $ref: "#/components/schemas/SEOData"
+            responses:
+                "200":
+                    description: Translation updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PageTranslation"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/{pageId}/seo:
+        get:
+            summary: Get page SEO data
+            description: |
+                Retrieves SEO metadata for a specific page in the requested language.
+                This endpoint is publicly accessible.
+
+                **Key Features:**
+                - Public access (no authentication required)
+                - Language-specific SEO data
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language not specified
+                - Returns 404 if page not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for SEO data
+            responses:
+                "200":
+                    description: SEO data retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SEOData"
+                            example:
+                                basics:
+                                    title: "About Us - ScoreTrend"
+                                    description: "Learn about ScoreTrend's mission and team"
+                                    canonical_url: "https://scoretrend.com/about"
+                                openGraph:
+                                    title: "About ScoreTrend"
+                                    description: "Your premier sports analytics platform"
+                                    type: "website"
+                                    image: "https://scoretrend.com/images/about-og.jpg"
+                                twitter:
+                                    card: "summary_large_image"
+                                    title: "About ScoreTrend"
+                                    description: "Your premier sports analytics platform"
+                                    image: "https://scoretrend.com/images/about-twitter.jpg"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+        put:
+            summary: Update page SEO data
+            description: |
+                Updates SEO metadata for a specific page in the specified language.
+
+                **Features:**
+                - Language-specific SEO updates
+                - Meta tags validation
+                - OpenGraph data validation
+                - Twitter card validation
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 400 if language parameter is missing
+                - Returns 400 if language code is invalid
+                - Returns 400 if SEO data exceeds length limits
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if page not found
+                - Returns 404 if translation not found for language
+            security:
+                - BearerAuth: []
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for SEO data
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SEOData"
+                        example:
+                            basics:
+                                title: "About Us - ScoreTrend"
+                                description: "Learn about ScoreTrend's mission and team"
+                                canonical_url: "https://scoretrend.com/about"
+                            openGraph:
+                                title: "About ScoreTrend"
+                                description: "Your premier sports analytics platform"
+                                type: "website"
+                                image: "https://scoretrend.com/images/about-og.jpg"
+                            twitter:
+                                card: "summary_large_image"
+                                title: "About ScoreTrend"
+                                description: "Your premier sports analytics platform"
+                                image: "https://scoretrend.com/images/about-twitter.jpg"
+            responses:
+                "200":
+                    description: SEO data updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SEOData"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/initialize:
+        post:
+            summary: Initialize fixed pages
+            description: |
+                Creates all predefined pages in the system.
+                Only accessible by administrators.
+                Idempotent operation - safe to call multiple times.
+
+                **Edge Cases:**
+                - Returns 403 if not admin
+            security:
+                - BearerAuth: []
+            tags:
+                - Pages
+            responses:
+                "200":
+                    description: Pages initialized successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: "Fixed pages initialized successfully"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+components:
+    schemas:
+        Page:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                type:
+                    type: string
+                    enum: [HOME, ABOUT, HOW_IT_WORKS, CONTACT, FAQ, NEWS, PRIVACY_POLICY, COOKIE_POLICY]
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                translations:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PageTranslation"
+                sections:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/Section"
+
+        PageTranslation:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                page_id:
+                    type: string
+                    format: uuid
+                language:
+                    type: string
+                    enum: [en, it, pt, es]
+                alias:
+                    type: string
+                seo_data:
+                    $ref: "#/components/schemas/SEOData"
+                created_at:
+                    type: string
+                    format: date-time
+
+        SEOData:
+            type: object
+            required:
+                - basics
+                - openGraph
+                - twitter
+            properties:
+                basics:
+                    type: object
+                    required:
+                        - title
+                        - description
+                    properties:
+                        title:
+                            type: string
+                            maxLength: 60
+                            description: Page title (max 60 characters)
+                        description:
+                            type: string
+                            maxLength: 160
+                            description: Meta description (max 160 characters)
+                        canonical_url:
+                            type: string
+                            format: uri
+                            description: Canonical URL for this page
+                openGraph:
+                    type: object
+                    required:
+                        - title
+                        - description
+                        - type
+                    properties:
+                        title:
+                            type: string
+                            maxLength: 60
+                            description: OpenGraph title
+                        description:
+                            type: string
+                            maxLength: 160
+                            description: OpenGraph description
+                        type:
+                            type: string
+                            enum: [website, article]
+                            description: OpenGraph type
+                        image:
+                            type: string
+                            format: uri
+                            description: OpenGraph image URL
+                twitter:
+                    type: object
+                    required:
+                        - card
+                        - title
+                        - description
+                    properties:
+                        card:
+                            type: string
+                            enum: [summary, summary_large_image]
+                            description: Twitter card type
+                        title:
+                            type: string
+                            maxLength: 60
+                            description: Twitter card title
+                        description:
+                            type: string
+                            maxLength: 160
+                            description: Twitter card description
+                        image:
+                            type: string
+                            format: uri
+                            description: Twitter card image URL

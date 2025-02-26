@@ -1,0 +1,879 @@
+paths:
+    /cms/faqs:
+        get:
+            summary: Get all FAQs with pagination
+            description: |
+                Retrieves all FAQ categories with their items.
+                This endpoint is publicly accessible and supports pagination.
+
+                **Features:**
+                - Public access (no authentication required)
+                - Language-specific content
+                - Ordered categories and items
+                - Pagination support
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language not specified
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - FAQs
+            parameters:
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for FAQ content
+                - in: query
+                  name: page
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      default: 1
+                  description: Page number for pagination
+                - in: query
+                  name: limit
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                  description: Number of items per page
+                - in: query
+                  name: sort
+                  required: false
+                  schema:
+                      type: string
+                  description: Field to sort by (e.g., createdAt)
+                - in: query
+                  name: order
+                  required: false
+                  schema:
+                      type: string
+                      enum: [asc, desc]
+                      default: desc
+                  description: Sort order
+            responses:
+                "200":
+                    description: Paginated list of FAQ categories with items
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/FAQCategory"
+                                    pagination:
+                                        type: object
+                                        properties:
+                                            total:
+                                                type: integer
+                                                description: Total number of items
+                                            page:
+                                                type: integer
+                                                description: Current page number
+                                            limit:
+                                                type: integer
+                                                description: Items per page
+                                            totalPages:
+                                                type: integer
+                                                description: Total number of pages
+                "400":
+                    description: Invalid request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Language parameter is required"
+                "429":
+                    $ref: "#/components/responses/TooManyRequests"
+
+    /cms/faqs/categories:
+        get:
+            summary: Get all FAQ categories with pagination
+            description: |
+                Retrieves all FAQ categories without their items.
+                This endpoint is publicly accessible and supports pagination.
+
+                **Features:**
+                - Public access (no authentication required)
+                - Language-specific content
+                - Categories ordered by order_index
+                - Pagination support
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language not specified
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - FAQs
+            parameters:
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for category content
+                - in: query
+                  name: page
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      default: 1
+                  description: Page number for pagination
+                - in: query
+                  name: limit
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                  description: Number of items per page
+                - in: query
+                  name: order
+                  required: false
+                  schema:
+                      type: string
+                      enum: [asc, desc]
+                      default: desc
+                  description: Sort order
+            responses:
+                "200":
+                    description: Paginated list of FAQ categories without items
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/FAQCategory"
+                                    pagination:
+                                        type: object
+                                        properties:
+                                            total:
+                                                type: integer
+                                                description: Total number of items
+                                            page:
+                                                type: integer
+                                                description: Current page number
+                                            limit:
+                                                type: integer
+                                                description: Items per page
+                                            totalPages:
+                                                type: integer
+                                                description: Total number of pages
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "429":
+                    $ref: "#/components/responses/TooManyRequests"
+        post:
+            summary: Create FAQ category
+            description: |
+                Creates a new FAQ category.
+                Only accessible by administrators.
+
+                **Features:**
+                - Category name validation
+                - Optional description
+                - Order management
+                - Multi-language support
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for the category content
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - name
+                            properties:
+                                name:
+                                    type: string
+                                    maxLength: 100
+                                    example: "General Questions"
+                                description:
+                                    type: string
+                                    maxLength: 500
+                                    example: "Frequently asked questions about our service"
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    example: 0
+            responses:
+                "201":
+                    description: FAQ category created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQCategory"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+    /cms/faqs/categories/{categoryId}:
+        get:
+            summary: Get single FAQ category
+            description: |
+                Retrieves a specific FAQ category by ID.
+                This endpoint is publicly accessible.
+
+                **Features:**
+                - Public access (no authentication required)
+                - Language-specific content
+                - Category details with translations
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language not specified
+                - Returns 404 if category not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: categoryId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ category ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for category content
+            responses:
+                "200":
+                    description: FAQ category details
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQCategory"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "429":
+                    $ref: "#/components/responses/TooManyRequests"
+        put:
+            summary: Update FAQ category
+            description: |
+                Updates an existing FAQ category.
+                Only accessible by administrators.
+
+                **Features:**
+                - Category name validation
+                - Optional description update
+                - Order management
+                - Multi-language support
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if category not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: categoryId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ category ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for the category content
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - name
+                            properties:
+                                name:
+                                    type: string
+                                    maxLength: 100
+                                    example: "Updated Category Name"
+                                description:
+                                    type: string
+                                    maxLength: 500
+                                    example: "Updated category description"
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+            responses:
+                "200":
+                    description: FAQ category updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQCategory"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+        delete:
+            summary: Delete FAQ category
+            description: |
+                Deletes an FAQ category and all its items.
+                Only accessible by administrators.
+
+                **Features:**
+                - Cascading deletion (removes all items)
+                - Permission validation
+                - Audit logging
+
+                **Edge Cases:**
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if category not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: categoryId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ category ID
+            responses:
+                "204":
+                    description: FAQ category deleted successfully
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/faqs/categories/{categoryId}/items:
+        get:
+            summary: Get category items
+            description: |
+                Retrieves all items for a specific FAQ category.
+                This endpoint is publicly accessible.
+
+                **Features:**
+                - Public access (no authentication required)
+                - Language-specific content
+                - Items ordered by order_index
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language not specified
+                - Returns 404 if category not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: categoryId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ category ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for item content
+            responses:
+                "200":
+                    description: List of FAQ items for the category
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: "#/components/schemas/FAQItem"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "429":
+                    $ref: "#/components/responses/TooManyRequests"
+        post:
+            summary: Add FAQ item to category
+            description: |
+                Creates a new FAQ item in the specified category.
+                Only accessible by administrators.
+
+                **Features:**
+                - Question and answer validation
+                - Order management
+                - Multi-language support
+                - HTML content support
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if category not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: categoryId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ category ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for the FAQ item
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - question
+                                - answer
+                            properties:
+                                question:
+                                    type: string
+                                    maxLength: 500
+                                    example: "How do I reset my password?"
+                                answer:
+                                    type: string
+                                    maxLength: 5000
+                                    example: "Click on the 'Forgot Password' link and follow the instructions sent to your email."
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    example: 0
+            responses:
+                "201":
+                    description: FAQ item created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQItem"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/faqs/items/{itemId}:
+        put:
+            summary: Update FAQ item
+            description: |
+                Updates an existing FAQ item.
+                Only accessible by administrators.
+
+                **Features:**
+                - Question and answer validation
+                - Order management
+                - Multi-language support
+                - HTML content support
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if item not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: itemId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ item ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for the FAQ item
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - question
+                                - answer
+                            properties:
+                                question:
+                                    type: string
+                                    maxLength: 500
+                                    example: "Updated question text"
+                                answer:
+                                    type: string
+                                    maxLength: 5000
+                                    example: "Updated answer text"
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+            responses:
+                "200":
+                    description: FAQ item updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQItem"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+        delete:
+            summary: Delete FAQ item
+            description: |
+                Deletes an FAQ item.
+                Only accessible by administrators.
+
+                **Features:**
+                - Permission validation
+                - Audit logging
+                - Translation cleanup
+
+                **Edge Cases:**
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if item not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: itemId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ item ID
+            responses:
+                "204":
+                    description: FAQ item deleted successfully
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/faqs/categories/{categoryId}/order:
+        patch:
+            summary: Update FAQ category order
+            description: |
+                Updates the display order of an FAQ category.
+                Only accessible by administrators.
+
+                **Features:**
+                - Order validation
+                - Automatic reordering
+                - Transaction support
+
+                **Edge Cases:**
+                - Returns 400 if order_index is invalid
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if category not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: categoryId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ category ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - order_index
+                            properties:
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    example: 2
+            responses:
+                "200":
+                    description: Category order updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQCategory"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/faqs/items/{itemId}/order:
+        patch:
+            summary: Update FAQ item order
+            description: |
+                Updates the display order of an FAQ item within its category.
+                Only accessible by administrators.
+
+                **Features:**
+                - Order validation
+                - Automatic reordering
+                - Transaction support
+
+                **Edge Cases:**
+                - Returns 400 if order_index is invalid
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if item not found
+            security:
+                - BearerAuth: []
+            tags:
+                - FAQs
+            parameters:
+                - in: path
+                  name: itemId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: FAQ item ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - order_index
+                            properties:
+                                order_index:
+                                    type: integer
+                                    minimum: 0
+                                    example: 2
+            responses:
+                "200":
+                    description: Item order updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/FAQItem"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+components:
+    schemas:
+        FAQCategory:
+            type: object
+            required:
+                - id
+                - order_index
+                - created_at
+                - updated_at
+                - translations
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                order_index:
+                    type: integer
+                    minimum: 0
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                translations:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/FAQCategoryTranslation"
+
+        FAQCategoryTranslation:
+            type: object
+            required:
+                - id
+                - category_id
+                - language
+                - name
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                category_id:
+                    type: string
+                    format: uuid
+                language:
+                    type: string
+                    enum: [en, it, pt, es]
+                name:
+                    type: string
+                    maxLength: 100
+                description:
+                    type: string
+                    maxLength: 500
+                created_at:
+                    type: string
+                    format: date-time
+
+        FAQItem:
+            type: object
+            required:
+                - id
+                - category_id
+                - order_index
+                - created_at
+                - updated_at
+                - translations
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                category_id:
+                    type: string
+                    format: uuid
+                order_index:
+                    type: integer
+                    minimum: 0
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                translations:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/FAQItemTranslation"
+
+        FAQItemTranslation:
+            type: object
+            required:
+                - id
+                - item_id
+                - language
+                - question
+                - answer
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                item_id:
+                    type: string
+                    format: uuid
+                language:
+                    type: string
+                    enum: [en, it, pt, es]
+                question:
+                    type: string
+                    maxLength: 500
+                answer:
+                    type: string
+                    maxLength: 5000
+                created_at:
+                    type: string
+                    format: date-time
+
+    responses:
+        TooManyRequests:
+            description: Too many requests
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            error:
+                                type: string
+                                example: "Too many requests from this IP, please try again after 15 minutes"
