@@ -108,14 +108,6 @@ interface HeroSection extends ContentSection {
 	buttonUrl?: string
 }
 
-interface ProgressSection extends ContentSection {
-	items: Array<{
-		title: string
-		percentage: number
-		color: string
-	}>
-}
-
 interface MediaSection extends ContentSection {
 	image: {
 		url: string
