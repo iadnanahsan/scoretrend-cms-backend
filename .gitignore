@@ -26,3 +26,9 @@ Thumbs.db
 
 # Example files
 example/
+
+# Project specific
+development-log.md
+development-plan.md
+docs/
+.cursorrules

@@ -2311,6 +2311,36 @@ const validatePage = async (req: Request, res: Response, next: NextFunction) => 
 
 -   No new dependencies added
 
+## 2025-02-26 17:45 (UTC+7 Jakarta)
+
+**Task:** Add Configuration Sharing Documentation
+**Category:** Documentation
+**Status:** Completed
+
+**Implementation Details:**
+
+1. Added a new section to README.md on "Sharing Sensitive Configuration" with:
+
+    - Best practices for sharing environment variables (.env files)
+    - Instructions for Google Cloud credentials management
+    - Security recommendations for handling sensitive information
+
+2. Created a `.env.example` template file with placeholder values that can be safely committed to the repository.
+
+3. Added a README.md file in the credentials directory with detailed instructions for:
+
+    - Creating a Google Cloud service account
+    - Generating and downloading credentials
+    - Placing credentials in the correct location
+    - Troubleshooting common issues
+
+4. Updated .gitignore to allow README.md files in credentials directories while still ignoring actual credential files.
+
+**References:**
+
+-   [Technical Specification](src/docs/scoretrend-CMS-backend-tech-spec.md)
+-   [Development Dependencies](src/docs/scoretrend-cms-dev-dependencies.md)
+
 ## 2025-02-26 17:15 (UTC+7 Jakarta)
 
 **Task:** Create Comprehensive README.md
@@ -2318,24 +2348,3 @@ const validatePage = async (req: Request, res: Response, next: NextFunction) => 
 **Status:** Completed
 
 **Implementation Details:**
-
-1. Created a detailed README.md file for the GitHub repository with the following sections:
-
-    - Project overview and system features
-    - Technology stack details
-    - Prerequisites for development and deployment
-    - Installation instructions with step-by-step guidance
-    - Environment variable configuration examples
-    - Database setup instructions
-    - Application running instructions for both development and production
-    - API documentation access information
-    - Deployment prerequisites and steps
-    - Project structure overview
-    - License and contact information
-
-2. Committed and pushed the README.md to the GitHub repository.
-
-**References:**
-
--   [Technical Specification](src/docs/scoretrend-CMS-backend-tech-spec.md)
--   [Development Dependencies](src/docs/scoretrend-cms-dev-dependencies.md)
