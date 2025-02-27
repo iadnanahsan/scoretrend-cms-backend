@@ -174,10 +174,22 @@ export class MediaController {
 			const stats = await sharp(buffer).stats()
 
 			// Check for suspiciously uniform areas (potential steganography)
+			// More lenient for small images like logos
 			const channels = stats.channels
-			const hasUniformArea = channels.some(
-				(channel) => channel.min === channel.max || channel.stdev < 0.1 // Very low variation indicates potential hidden data
-			)
+			const isSmallImage = metadata.width * metadata.height < 10000 // Less than 100x100 equivalent
+
+			// Skip uniform area check for small images or adjust threshold based on size
+			const uniformAreaThreshold = isSmallImage ? 0.01 : 0.05
+
+			const hasUniformArea =
+				!isSmallImage &&
+				channels.some(
+					(channel) =>
+						// Only check for completely uniform channels (min === max) in larger images
+						channel.min === channel.max ||
+						// Use a more lenient threshold for standard deviation
+						(channel.stdev < uniformAreaThreshold && channel.mean > 0.1 && channel.mean < 0.9)
+				)
 
 			if (hasUniformArea) {
 				return {
