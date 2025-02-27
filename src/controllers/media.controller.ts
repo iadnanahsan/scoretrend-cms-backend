@@ -49,9 +49,9 @@ export class MediaController {
 
 	private readonly FORMAT_REQUIREMENTS: Record<string, FormatRequirements> = {
 		"image/jpeg": {
-			minWidth: 200,
+			minWidth: 16,
 			maxWidth: 8192,
-			minHeight: 200,
+			minHeight: 16,
 			maxHeight: 8192,
 			maxSize: 5 * 1024 * 1024, // 5MB
 			allowedColorSpaces: ["srgb", "cmyk"],
@@ -59,9 +59,9 @@ export class MediaController {
 			minDepth: 8,
 		},
 		"image/png": {
-			minWidth: 32,
+			minWidth: 16,
 			maxWidth: 8192,
-			minHeight: 32,
+			minHeight: 16,
 			maxHeight: 8192,
 			maxSize: 5 * 1024 * 1024,
 			allowedColorSpaces: ["srgb"],
@@ -69,9 +69,9 @@ export class MediaController {
 			minDepth: 8,
 		},
 		"image/webp": {
-			minWidth: 200,
+			minWidth: 16,
 			maxWidth: 8192,
-			minHeight: 200,
+			minHeight: 16,
 			maxHeight: 8192,
 			maxSize: 5 * 1024 * 1024,
 			allowedColorSpaces: ["srgb"],
@@ -79,9 +79,9 @@ export class MediaController {
 			minDepth: 8,
 		},
 		"image/gif": {
-			minWidth: 200,
+			minWidth: 16,
 			maxWidth: 4096,
-			minHeight: 200,
+			minHeight: 16,
 			maxHeight: 4096,
 			maxSize: 5 * 1024 * 1024,
 			allowedColorSpaces: ["srgb"],
