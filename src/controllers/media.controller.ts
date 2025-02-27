@@ -173,8 +173,10 @@ export class MediaController {
 			// Check for potential malicious content
 			const stats = await sharp(buffer).stats()
 
-			// Check for suspiciously uniform areas (potential steganography)
-			// More lenient for small images like logos
+			// DISABLED: Check for suspiciously uniform areas (potential steganography)
+			// This check was causing too many false positives with legitimate images
+			// Especially with logos, diagrams, and illustrations that have solid color areas
+			/*
 			const channels = stats.channels
 			const isSmallImage = metadata.width * metadata.height < 10000 // Less than 100x100 equivalent
 
@@ -197,6 +199,7 @@ export class MediaController {
 					error: "Image contains suspicious uniform areas",
 				}
 			}
+			*/
 
 			return {
 				isValid: true,
