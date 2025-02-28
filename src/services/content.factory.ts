@@ -214,11 +214,8 @@ export class ContentFactory {
 
 	private static createTimelineSection(data: any): ContentSection {
 		return {
-			title: data.title,
-			description: data.description,
 			events: data.items?.map((item: any) => ({
 				date: item.date,
-				title: item.title,
 				description: item.description,
 				order: item.order,
 				image: item.image

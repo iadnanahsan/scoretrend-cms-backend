@@ -825,12 +825,11 @@ const heroSectionSchema = baseSectionSchema.extend({
 })
 
 // Timeline section schema
-const timelineSectionSchema = baseSectionSchema.extend({
+const timelineSectionSchema = z.object({
 	items: z
 		.array(
 			z.object({
 				date: z.string().min(1, "Date is required"),
-				title: z.string().min(1, "Title is required").max(200, "Title cannot exceed 200 characters"),
 				description: z
 					.string()
 					.min(1, "Description is required")
