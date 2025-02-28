@@ -834,7 +834,7 @@ const timelineSectionSchema = z.object({
 					.string()
 					.min(1, "Description is required")
 					.max(5000, "Description cannot exceed 5000 characters"),
-				date: z.string().min(1, "Date is required"),
+				date: z.string().min(1, "Date is required - should be in human-readable format like 'April 2024'"),
 				order: z.number().int().min(0, "Order must be a non-negative number"),
 				image: z
 					.object({
