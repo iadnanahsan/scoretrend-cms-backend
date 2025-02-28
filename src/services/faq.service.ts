@@ -63,6 +63,15 @@ export class FAQService {
 				throw new Error(`Unsupported language: ${language}`)
 			}
 
+			// First verify category exists
+			const category = await prisma.fAQCategory.findUnique({
+				where: {id: categoryId},
+			})
+
+			if (!category) {
+				throw new Error(`FAQ category not found: ${categoryId}`)
+			}
+
 			// Get highest order_index
 			const lastItem = await prisma.fAQItem.findFirst({
 				where: {category_id: categoryId},
@@ -89,6 +98,10 @@ export class FAQService {
 			})
 		} catch (error) {
 			logger.error("Error adding FAQ item:", error)
+			// Re-throw the original error to preserve the message
+			if (error instanceof Error) {
+				throw error
+			}
 			throw new Error("Failed to add FAQ item")
 		}
 	}
