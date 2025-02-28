@@ -221,7 +221,11 @@ export class FAQController {
 		try {
 			const {itemId} = req.params
 			await this.faqService.deleteItem(itemId)
-			res.status(204).send()
+			res.status(200).json({
+				success: true,
+				message: "FAQ item deleted successfully",
+				deleted_item_id: itemId,
+			})
 		} catch (error) {
 			logger.error("Error deleting FAQ item:", error)
 			if (error instanceof Error) {
@@ -355,6 +359,17 @@ export class FAQController {
 			}
 
 			const items = await this.faqService.getCategoryItems(categoryId, language)
+
+			// If no items found, return a more descriptive response
+			if (items.length === 0) {
+				res.json({
+					message: "No FAQ items found for this category",
+					data: [],
+					category_id: categoryId,
+				})
+				return
+			}
+
 			res.json(items)
 		} catch (error) {
 			logger.error("Error getting category items:", error)
