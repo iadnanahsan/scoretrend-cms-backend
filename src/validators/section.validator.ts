@@ -236,10 +236,8 @@ function getFriendlyErrorMessage(error: z.ZodError["errors"][0], sectionType: st
 			description: "Explanation of what happens when expanding an event",
 		},
 		TIMELINE: {
-			title: "Title for the news timeline section",
-			description: "Overall description of the news timeline",
 			items: "List of news entries in chronological order",
-			"items.date": "Date of the news entry (e.g., '2024-03-15')",
+			"items.date": "Date of the news entry in ISO format (e.g., '2025-03-14T19:38:00.000Z')",
 			"items.title": "Title of the news entry (max 200 characters)",
 			"items.description": "Detailed description of the news entry (max 5000 characters)",
 			"items.order": "Manual ordering number (0 or greater)",
@@ -423,6 +421,8 @@ function getSectionDescription(sectionType: string): string {
 			"View all live match statistics including goals, shots, possession, and more. Filter by time periods to analyze team performance.",
 		"image.url": "URL for the stats live example image",
 		"image.alt": "Descriptive alt text for the stats live image",
+		TIMELINE:
+			"The TIMELINE section displays a chronological list of news and updates, with each item having a date, title, description, and optional image.",
 	}
 	return descriptions[sectionType] || "Section for content management"
 }
@@ -542,6 +542,8 @@ function getExampleExplanation(sectionType: string): string {
 			"View all live match statistics including goals, shots, possession, and more. Filter by time periods to analyze team performance.",
 		"image.url": "URL for the stats live example image",
 		"image.alt": "Descriptive alt text for the stats live image",
+		TIMELINE:
+			"This example shows a TIMELINE section with an array of items, each containing a date, title, description, and optional image.",
 	}
 	return explanations[sectionType] || "Example content for this section type"
 }
@@ -771,15 +773,19 @@ const sectionExamples: Partial<Record<SectionType, any>> = {
 			"Clicking on expand event opens in another window the page dedicated to the selected match. Here you will find a bigger histogram chart and all the windows on the right side of the chart. Soon in this section on the right side there will be a menu to access to all the complete statistics.",
 	},
 	[SectionType.TIMELINE]: {
-		title: "ScoreTrend News & Updates",
-		description: "Overall description of the news timeline",
-		items: "List of news entries in chronological order",
-		"items.date": "Date of the news entry (e.g., '2024-03-15')",
-		"items.title": "Title of the news entry (max 200 characters)",
-		"items.description": "Detailed description of the news entry (max 5000 characters)",
-		"items.order": "Manual ordering number (0 or greater)",
-		"items.image.url": "URL for the news entry image",
-		"items.image.alt": "Descriptive alt text for the image",
+		items: [
+			{
+				title: "ScoreTrend Trademark Registration",
+				description:
+					"La Oficina Italiana de Patentes y Marcas UIBM concede el registro de la marca SCORETREND. ScoreTrend® es ahora una marca registrada.",
+				date: "2025-03-14T19:38:00.000Z",
+				order: 0,
+				image: {
+					url: "https://storage.googleapis.com/scoretrend/sections/content/example-image.png",
+					alt: "ScoreTrend registered trademark logo",
+				},
+			},
+		],
 	},
 }
 
@@ -834,7 +840,7 @@ const timelineSectionSchema = z.object({
 					.string()
 					.min(1, "Description is required")
 					.max(5000, "Description cannot exceed 5000 characters"),
-				date: z.string().min(1, "Date is required - should be in human-readable format like 'April 2024'"),
+				date: z.string().min(1, "Date is required - ISO format (e.g., '2025-03-14T19:38:00.000Z')"),
 				order: z.number().int().min(0, "Order must be a non-negative number"),
 				image: z
 					.object({
