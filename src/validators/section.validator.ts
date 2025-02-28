@@ -829,11 +829,12 @@ const timelineSectionSchema = z.object({
 	items: z
 		.array(
 			z.object({
-				date: z.string().min(1, "Date is required"),
+				title: z.string().min(1, "Title is required").max(200, "Title cannot exceed 200 characters"),
 				description: z
 					.string()
 					.min(1, "Description is required")
 					.max(5000, "Description cannot exceed 5000 characters"),
+				date: z.string().min(1, "Date is required"),
 				order: z.number().int().min(0, "Order must be a non-negative number"),
 				image: z
 					.object({
