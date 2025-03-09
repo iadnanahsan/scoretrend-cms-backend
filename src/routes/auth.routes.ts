@@ -3,14 +3,7 @@ import {UserRole} from "@prisma/client"
 import {validateRequest} from "../middleware/validation.middleware"
 import {authenticate} from "../middleware/auth.middleware"
 import {authorize} from "../middleware/role.middleware"
-import {
-	registerUserSchema,
-	loginUserSchema,
-	resetPasswordSchema,
-	forgotPasswordSchema,
-	verifyEmailSchema,
-	resendVerificationSchema,
-} from "../schemas/user.schema"
+import {registerUserSchema, loginUserSchema, resetPasswordSchema, forgotPasswordSchema} from "../schemas/user.schema"
 import {AuthController} from "../controllers/auth.controller"
 
 const router = Router()
@@ -69,23 +62,6 @@ router.post(
 	authenticate as RequestHandler,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await authController.logout(req, res)
-	})
-)
-
-// Email verification routes
-router.post(
-	"/verify-email",
-	validateRequest(verifyEmailSchema) as RequestHandler,
-	asyncHandler(async (req: Request, res: Response): Promise<any> => {
-		await authController.verifyEmail(req, res)
-	})
-)
-
-router.post(
-	"/resend-verification",
-	validateRequest(resendVerificationSchema) as RequestHandler,
-	asyncHandler(async (req: Request, res: Response): Promise<any> => {
-		await authController.resendVerification(req, res)
 	})
 )
 

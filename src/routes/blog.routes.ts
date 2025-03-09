@@ -5,6 +5,8 @@ import {authenticate} from "../middleware/auth.middleware"
 import {authorize} from "../middleware/role.middleware"
 import {BlogController} from "../controllers/blog.controller"
 import {validateRequest} from "../middleware/validation.middleware"
+import {publicOrAuthenticated} from "../middleware/public-access.middleware"
+import {publicEndpointLimiter, commentRateLimiter} from "../middleware/rate-limit.middleware"
 import {
 	createCategorySchema,
 	updateCategorySchema,
@@ -40,7 +42,8 @@ const asyncHandler =
 // List categories with pagination
 router.get(
 	"/categories",
-	authenticate as RequestHandler,
+	publicOrAuthenticated as RequestHandler,
+	publicEndpointLimiter,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await blogController.listCategories(req, res)
 	})
@@ -60,7 +63,8 @@ router.post(
 // Get category by ID
 router.get(
 	"/categories/:id",
-	authenticate as RequestHandler,
+	publicOrAuthenticated as RequestHandler,
+	publicEndpointLimiter,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await blogController.getCategoryById(req, res)
 	})
@@ -90,7 +94,8 @@ router.delete(
 // Post Routes
 router.get(
 	"/posts",
-	authenticate as RequestHandler,
+	publicOrAuthenticated as RequestHandler,
+	publicEndpointLimiter,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await blogController.listPosts(req, res)
 	})
@@ -105,9 +110,30 @@ router.post(
 	})
 )
 
+// Get all blog post aliases - IMPORTANT: This route must be defined BEFORE the /posts/:id route
+router.get(
+	"/posts/aliases",
+	publicEndpointLimiter,
+	publicOrAuthenticated as RequestHandler,
+	asyncHandler(async (req: Request, res: Response): Promise<any> => {
+		await blogController.getAllAliases(req, res)
+	})
+)
+
+// Get post by alias - IMPORTANT: This route must be defined BEFORE the /posts/:id route
+router.get(
+	"/posts/by-alias/:alias",
+	publicOrAuthenticated as RequestHandler,
+	publicEndpointLimiter,
+	asyncHandler(async (req: Request, res: Response): Promise<any> => {
+		await blogController.getPostByAlias(req, res)
+	})
+)
+
 router.get(
 	"/posts/:id",
-	authenticate as RequestHandler,
+	publicOrAuthenticated as RequestHandler,
+	publicEndpointLimiter,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await blogController.getPostById(req, res)
 	})
@@ -133,6 +159,7 @@ router.delete(
 // Comment Routes
 router.get(
 	"/posts/:postId/comments",
+	publicOrAuthenticated as RequestHandler,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await blogController.getPostComments(req, res)
 	})
@@ -141,6 +168,7 @@ router.get(
 router.post(
 	"/posts/:postId/comments",
 	validateRequest(createCommentSchema) as RequestHandler,
+	commentRateLimiter,
 	asyncHandler<{postId: string}, any, CreateCommentRequest>(async (req, res): Promise<any> => {
 		await blogController.createComment(req, res)
 	})

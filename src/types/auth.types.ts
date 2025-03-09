@@ -1,4 +1,4 @@
-import {User, UserRole} from "@prisma/client"
+import {User, UserRole, UserStatus} from "@prisma/client"
 import {Request} from "express"
 
 export interface TokenPayload {
@@ -11,7 +11,15 @@ export interface AuthenticatedRequest extends Request {
 	user?: TokenPayload
 }
 
-export type UserResponse = Omit<User, "password">
+export interface UserResponse {
+	id: string
+	email: string
+	name: string
+	role: UserRole
+	status: UserStatus
+	created_at: Date
+	updated_at: Date
+}
 
 export interface AuthResponse {
 	message: string
@@ -24,20 +32,6 @@ export interface ErrorResponse {
 	message: string
 	code?: string
 	details?: unknown
-}
-
-export interface EmailVerificationToken {
-	token: string
-	userId: string
-	expiresAt: Date
-}
-
-export interface VerifyEmailRequest {
-	token: string
-}
-
-export interface ResendVerificationRequest {
-	email: string
 }
 
 export interface JWTPayload {

@@ -141,8 +141,23 @@ export class URLService {
 	/**
 	 * Generate URL for page
 	 */
-	private generatePageUrl(baseUrl: string, alias: string, language: SupportedLanguage): string {
-		// Always include language code for consistency
+	private generatePageUrl(baseUrl: string, alias: string, language: SupportedLanguage, pageType?: string): string {
+		// Special handling for HOME page type
+		if (pageType === "HOME") {
+			// For HOME page, use root URL for default language (en)
+			if (language === "en") {
+				return baseUrl
+			}
+			// For other languages, use language prefix only
+			return `${baseUrl}/${language}`.replace(/\/+/g, "/")
+		}
+
+		// For default language (en), don't include language prefix
+		if (language === "en") {
+			return `${baseUrl}/${alias}`.replace(/\/+/g, "/")
+		}
+
+		// For other languages, include language prefix
 		return `${baseUrl}/${language}/${alias}`.replace(/\/+/g, "/")
 	}
 
@@ -150,7 +165,12 @@ export class URLService {
 	 * Generate URL for blog post
 	 */
 	private generateBlogUrl(baseUrl: string, alias: string, language: SupportedLanguage): string {
-		// Always include language code for consistency
+		// For default language (en), don't include language prefix
+		if (language === "en") {
+			return `${baseUrl}/blog/${alias}`.replace(/\/+/g, "/")
+		}
+
+		// For other languages, include language prefix
 		return `${baseUrl}/${language}/blog/${alias}`.replace(/\/+/g, "/")
 	}
 
@@ -179,25 +199,60 @@ export class URLService {
 
 			for (const page of pages) {
 				// Get all language versions for this page
-				const languageAlternates = page.translations.map((translation) => ({
-					lang: translation.language,
-					url: this.generatePageUrl(baseUrl, translation.alias, translation.language as SupportedLanguage),
-				}))
+				const languageAlternates = page.translations.map((translation) => {
+					// Skip placeholder aliases for HOME page type
+					if (page.type === "HOME") {
+						return {
+							lang: translation.language,
+							url: this.generatePageUrl(
+								baseUrl,
+								"",
+								translation.language as SupportedLanguage,
+								page.type
+							),
+						}
+					}
+
+					return {
+						lang: translation.language,
+						url: this.generatePageUrl(
+							baseUrl,
+							translation.alias,
+							translation.language as SupportedLanguage,
+							page.type
+						),
+					}
+				})
 
 				// Add x-default (using English version as default)
 				const defaultTranslation = page.translations.find((t) => t.language === "en")
 				if (defaultTranslation) {
-					languageAlternates.unshift({
-						lang: "x-default",
-						url: this.generatePageUrl(baseUrl, defaultTranslation.alias, "en"),
-					})
+					// Skip placeholder alias for HOME page type
+					if (page.type === "HOME") {
+						languageAlternates.unshift({
+							lang: "x-default",
+							url: this.generatePageUrl(baseUrl, "", "en", page.type),
+						})
+					} else {
+						languageAlternates.unshift({
+							lang: "x-default",
+							url: this.generatePageUrl(baseUrl, defaultTranslation.alias, "en", page.type),
+						})
+					}
 				}
 
 				// Add each language version as a separate URL with alternates
 				for (const translation of page.translations) {
 					const lang = translation.language as SupportedLanguage
+
+					// Skip placeholder aliases for HOME page type
+					const url =
+						page.type === "HOME"
+							? this.generatePageUrl(baseUrl, "", lang, page.type)
+							: this.generatePageUrl(baseUrl, translation.alias, lang, page.type)
+
 					links.push({
-						url: this.generatePageUrl(baseUrl, translation.alias, lang),
+						url,
 						lastmod: page.updated_at.toISOString(),
 						// Set priority based on content type (can be made configurable)
 						priority: this.getContentPriority(page.type),

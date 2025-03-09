@@ -831,7 +831,13 @@ const heroSectionSchema = baseSectionSchema.extend({
 })
 
 // Timeline section schema
-const timelineSectionSchema = z.object({
+const timelineSectionSchema = baseSectionSchema.extend({
+	title: z.string().min(1, "Title is required").max(100, "Title cannot exceed 100 characters").optional(),
+	description: z
+		.string()
+		.min(1, "Description is required")
+		.max(5000, "Description cannot exceed 5000 characters")
+		.optional(),
 	items: z
 		.array(
 			z.object({
@@ -895,6 +901,14 @@ const contactSectionSchema = baseSectionSchema.extend({
 			lat: z.number(),
 			lng: z.number(),
 		})
+		.optional(),
+	social_links: z
+		.array(
+			z.object({
+				platform: z.enum(["facebook", "twitter", "instagram", "youtube"]),
+				url: z.string().url("Invalid social media URL"),
+			})
+		)
 		.optional(),
 })
 

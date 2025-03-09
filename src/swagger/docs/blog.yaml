@@ -19,38 +19,25 @@ paths:
                 - Blog
             summary: List blog posts
             description: |
-                Retrieves a paginated list of blog posts with enhanced filtering and sorting capabilities.
-                Includes view count and reading time information.
+                Retrieves a paginated list of blog posts with optional filtering.
 
                 **Features:**
-                - Pagination support (1-100 items per page)
-                - Category and author filtering
-                - Date range filtering
-                - Multiple sorting options
-                - Case-insensitive search
-                - Performance metrics
-                - Status filtering
+                - Pagination
+                - Filtering by category, author, status, date range
+                - Sorting by creation date, view count, or reading time
                 - Language filtering
-
-                **Performance:**
-                - Response time monitoring
-                - Query optimization
-                - Input validation
-                - Error tracking
+                - Search functionality
             parameters:
                 - in: query
                   name: page
                   schema:
                       type: integer
-                      minimum: 1
                       default: 1
-                  description: Page number for pagination
+                  description: Page number
                 - in: query
                   name: limit
                   schema:
                       type: integer
-                      minimum: 1
-                      maximum: 100
                       default: 10
                   description: Number of items per page
                 - in: query
@@ -70,35 +57,25 @@ paths:
                   schema:
                       type: string
                       enum: [DRAFT, PUBLISHED]
-                  description: Filter by blog post status
+                  description: Filter by post status (requires authentication)
                 - in: query
                   name: language
                   schema:
                       type: string
-                      pattern: "^[a-z]{2}$"
-                      example: "en"
-                  description: Filter content by language (2-letter ISO code)
+                      enum: [en, it, pt, es]
+                  description: Filter translations by language
                 - in: query
-                  name: start_date
+                  name: search
                   schema:
                       type: string
-                      format: date
-                      example: "2024-01-01"
-                  description: Filter posts created on or after this date
-                - in: query
-                  name: end_date
-                  schema:
-                      type: string
-                      format: date
-                      example: "2024-12-31"
-                  description: Filter posts created on or before this date
+                  description: Search term to filter posts by title or content
                 - in: query
                   name: sort_by
                   schema:
                       type: string
                       enum: [created_at, view_count, reading_time]
                       default: created_at
-                  description: Field to sort results by
+                  description: Field to sort by
                 - in: query
                   name: sort_direction
                   schema:
@@ -107,21 +84,20 @@ paths:
                       default: desc
                   description: Sort direction
                 - in: query
-                  name: search
+                  name: start_date
                   schema:
                       type: string
-                      minLength: 2
-                      maxLength: 100
-                  description: Search in titles and content (case-insensitive)
+                      format: date
+                  description: Filter posts created on or after this date (YYYY-MM-DD)
+                - in: query
+                  name: end_date
+                  schema:
+                      type: string
+                      format: date
+                  description: Filter posts created on or before this date (YYYY-MM-DD)
             responses:
                 "200":
                     description: List of blog posts
-                    headers:
-                        X-Response-Time:
-                            schema:
-                                type: string
-                                example: "123.45ms"
-                            description: Query execution time
                     content:
                         application/json:
                             schema:
@@ -138,6 +114,8 @@ paths:
                                       cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
                                       view_count: 150
                                       reading_time: 5
+                                      comments_count: 12
+                                      pending_comments_count: 5
                                       translations:
                                           en:
                                               title: "Example Blog Post"
@@ -243,6 +221,7 @@ paths:
                             $ref: "#/components/schemas/CreateBlogPostRequest"
                         example:
                             category_id: "123e4567-e89b-12d3-a456-426614174001"
+                            status: "PUBLISHED"
                             thumbnail_url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
                             cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
                             translations:
@@ -273,6 +252,8 @@ paths:
                                 cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
                                 view_count: 0
                                 reading_time: 5
+                                comments_count: 0
+                                pending_comments_count: 0
                                 translations:
                                     en:
                                         title: "Example Blog Post"
@@ -312,7 +293,7 @@ paths:
                                 code: "DUPLICATE_ENTRY"
                                 details:
                                     field: "alias"
-                                    message: "A blog post with this alias already exists"
+                                    message: "A blog post with this alias already exists for the specified language. Each blog post must have a unique alias within its language."
 
     /cms/blog/posts/{id}:
         get:
@@ -357,6 +338,8 @@ paths:
                                 cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
                                 view_count: 151
                                 reading_time: 5
+                                comments_count: 12
+                                pending_comments_count: 5
                                 translations:
                                     en:
                                         title: "Example Blog Post"
@@ -485,7 +468,7 @@ paths:
                                 code: "DUPLICATE_ENTRY"
                                 details:
                                     field: "alias"
-                                    message: "A blog post with this alias already exists"
+                                    message: "A blog post with this alias already exists for the specified language. Each blog post must have a unique alias within its language."
 
         delete:
             tags:
@@ -551,8 +534,6 @@ paths:
                 - Multi-language support
                 - Pagination
                 - Optional language filtering
-            security:
-                - BearerAuth: []
             tags:
                 - Blog
             parameters:
@@ -581,8 +562,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/PaginatedCategoryResponse"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
 
         post:
             summary: Create blog category
@@ -634,8 +613,6 @@ paths:
                 **Features:**
                 - Multi-language support
                 - Optional language filtering
-            security:
-                - BearerAuth: []
             tags:
                 - Blog
             parameters:
@@ -659,8 +636,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/BlogCategory"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
                 "404":
                     $ref: "#/components/responses/NotFound"
 
@@ -855,21 +830,21 @@ paths:
                 - Blog
             summary: Get post comments
             description: |
-                Retrieves all comments for a specific blog post.
-                Can be filtered by moderation status.
+                Retrieves comments for a specific blog post.
+
+                **Behavior by user role:**
+                - **Public/Unauthenticated users**: Only see APPROVED comments
+                - **Administrators**: See all comments by default, can filter by status
 
                 **Features:**
                 - Pagination support
-                - Status filtering
+                - Status filtering (admin only)
                 - Nested replies
                 - User information included
                 - Sorted by creation date (descending)
 
                 **Edge Cases:**
-                - Returns 401 if not authenticated
                 - Returns 404 if post not found
-            security:
-                - BearerAuth: []
             parameters:
                 - in: path
                   name: postId
@@ -882,8 +857,20 @@ paths:
                   name: status
                   schema:
                       type: string
-                      enum: [PENDING, APPROVED, REJECTED, SPAM]
-                  description: Filter comments by status
+                      enum: [APPROVED, REJECTED, SPAM]
+                  description: Filter comments by status (admin only, ignored for non-admin users)
+                - in: query
+                  name: page
+                  schema:
+                      type: integer
+                      default: 1
+                  description: Page number for pagination
+                - in: query
+                  name: limit
+                  schema:
+                      type: integer
+                      default: 10
+                  description: Number of comments per page
             responses:
                 "200":
                     description: List of comments for the post
@@ -893,8 +880,6 @@ paths:
                                 type: array
                                 items:
                                     $ref: "#/components/schemas/BlogComment"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
                 "404":
                     $ref: "#/components/responses/NotFound"
                 "500":
@@ -907,20 +892,19 @@ paths:
             description: |
                 Creates a new comment on a blog post.
                 Comments can be top-level or replies to existing comments.
+                Supports guest comments with guest_name field.
+                Guest comments are set to PENDING status by default and require admin approval.
 
                 **Features:**
                 - Reply support
-                - Automatic status setting (PENDING)
+                - Moderation workflow
                 - Content validation
-                - User association
+                - Guest comment support
 
                 **Edge Cases:**
                 - Returns 400 if content validation fails
-                - Returns 401 if not authenticated
                 - Returns 404 if post not found
                 - Returns 404 if reply_to comment doesn't exist
-            security:
-                - BearerAuth: []
             parameters:
                 - in: path
                   name: postId
@@ -937,12 +921,18 @@ paths:
                             type: object
                             required:
                                 - content
+                                - guest_name
                             properties:
                                 content:
                                     type: string
                                     minLength: 1
                                     maxLength: 1000
                                     description: Comment content
+                                guest_name:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 100
+                                    description: Name of the guest commenter
                                 reply_to:
                                     type: string
                                     format: uuid
@@ -956,8 +946,6 @@ paths:
                                 $ref: "#/components/schemas/BlogComment"
                 "400":
                     $ref: "#/components/responses/ValidationError"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
                 "404":
                     $ref: "#/components/responses/NotFound"
                 "500":
@@ -970,18 +958,18 @@ paths:
             summary: Update comment
             description: |
                 Updates an existing comment.
-                Users can only update their own comments.
+                Only administrators can update comments.
 
                 **Features:**
                 - Content validation
-                - Owner verification
+                - Admin-only access
                 - Maintains moderation status
                 - Update timestamp tracking
 
                 **Edge Cases:**
                 - Returns 400 if content validation fails
                 - Returns 401 if not authenticated
-                - Returns 403 if not comment owner
+                - Returns 403 if not an administrator
                 - Returns 404 if comment not found
             security:
                 - BearerAuth: []
@@ -1019,11 +1007,287 @@ paths:
                 "401":
                     $ref: "#/components/responses/Unauthorized"
                 "403":
-                    $ref: "#/components/responses/Forbidden"
+                    description: Insufficient permissions
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Insufficient permissions"
+                                code: "FORBIDDEN"
+                                details:
+                                    message: "Only administrators can update comments"
                 "404":
                     $ref: "#/components/responses/NotFound"
                 "500":
                     $ref: "#/components/responses/InternalError"
+
+        delete:
+            tags:
+                - Blog
+            summary: Delete comment
+            description: |
+                Deletes a comment from a blog post.
+                Only administrators can delete comments.
+
+                **Features:**
+                - Admin-only access
+                - Cascading deletion (deletes all replies)
+                - Complete removal from database
+                - Success message with deleted comment ID
+
+                **Edge Cases:**
+                - Returns 401 if not authenticated
+                - Returns 403 if not an administrator
+                - Returns 404 if comment not found or already deleted
+            security:
+                - BearerAuth: []
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Comment ID
+            responses:
+                "200":
+                    description: Comment deleted successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: "Comment deleted successfully"
+                                    deletedCommentId:
+                                        type: string
+                                        format: uuid
+                                        example: "123e4567-e89b-12d3-a456-426614174000"
+                "401":
+                    description: Authentication required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Authentication required"
+                                message: "You must be logged in to delete comments"
+                "403":
+                    description: Insufficient permissions
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Insufficient permissions"
+                                message: "Only administrators can delete comments"
+                "404":
+                    description: Comment not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Comment not found"
+                                message: "The comment you're trying to delete doesn't exist or has already been removed"
+                "500":
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Failed to delete comment"
+                                message: "There was a problem deleting the comment. Please try again later."
+
+    /cms/blog/posts/by-alias/{alias}:
+        get:
+            tags:
+                - Blog
+            summary: Get blog post by alias
+            description: |
+                Retrieves a blog post by its SEO-friendly alias.
+                Increments view count for published posts.
+
+                **Features:**
+                - Case-insensitive alias matching
+                - View count tracking
+                - Language filtering
+                - Author information
+                - Category details
+                - Translation support
+            parameters:
+                - in: path
+                  name: alias
+                  required: true
+                  schema:
+                      type: string
+                  description: SEO-friendly URL alias of the blog post
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for content filtering
+            responses:
+                "200":
+                    description: Blog post details
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BlogPost"
+                            example:
+                                id: "123e4567-e89b-12d3-a456-426614174000"
+                                category_id: "123e4567-e89b-12d3-a456-426614174001"
+                                category_name: "Sports Analytics"
+                                author_id: "123e4567-e89b-12d3-a456-426614174002"
+                                author_name: "John Doe"
+                                author_details:
+                                    id: "123e4567-e89b-12d3-a456-426614174002"
+                                    name: "John Doe"
+                                    email: "john.doe@example.com"
+                                    profile_image_url: "https://storage.googleapis.com/scoretrend/authors/john-doe.webp"
+                                    translations:
+                                        en:
+                                            name: "John Doe"
+                                            description: "Sports analyst with 10+ years of experience"
+                                status: "PUBLISHED"
+                                thumbnail_url: "https://storage.googleapis.com/scoretrend/blog/thumbnails/example.webp"
+                                cover_url: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                                view_count: 1
+                                reading_time: 5
+                                comments_count: 0
+                                pending_comments_count: 0
+                                translations:
+                                    en:
+                                        title: "Example Blog Post"
+                                        content: "This is an example blog post content."
+                                        alias: "example-blog-post"
+                                        seo:
+                                            title: "Example Blog Post - ScoreTrend"
+                                            description: "This is an example blog post for ScoreTrend CMS."
+                                            keywords: ["example", "blog", "scoretrend"]
+                                            og_title: "Example Blog Post - ScoreTrend"
+                                            og_description: "This is an example blog post for ScoreTrend CMS."
+                                            og_image: "https://storage.googleapis.com/scoretrend/blog/covers/example.webp"
+                                created_at: "2025-01-01T12:00:00Z"
+                                updated_at: "2025-01-01T12:00:00Z"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Language parameter is required"
+                                message: "Language parameter is required"
+                                details:
+                                    field: "language"
+                                    message: "The language parameter is required for this endpoint"
+                "404":
+                    description: Blog post not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Post not found"
+                                message: "Post not found"
+                                details:
+                                    alias: "non-existent-alias"
+                                    message: "No blog post exists with this alias"
+
+    /cms/blog/posts/aliases:
+        get:
+            tags:
+                - Blog
+            summary: Get all blog post aliases grouped by post
+            description: |
+                Retrieves a list of all blog posts with their translations and aliases grouped together.
+                This endpoint is publicly accessible and returns aliases for ALL languages.
+                No language parameter is required.
+
+                **Key Features:**
+                - Public access (no authentication required)
+                - Returns all blog post aliases across all languages
+                - Groups translations by post
+                - Includes post title information
+                - Useful for sitemap generation and URL validation
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            responses:
+                "200":
+                    description: List of all blog posts with their translations and aliases
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        post_id:
+                                            type: string
+                                            format: uuid
+                                            description: Blog post ID
+                                        translations:
+                                            type: array
+                                            items:
+                                                type: object
+                                                properties:
+                                                    language:
+                                                        type: string
+                                                        enum: [en, it, pt, es]
+                                                        description: Language code
+                                                    alias:
+                                                        type: string
+                                                        description: SEO-friendly URL path segment
+                                                        example: "example-blog-post"
+                                                    title:
+                                                        type: string
+                                                        description: Blog post title
+                            example:
+                                - post_id: "123e4567-e89b-12d3-a456-426614174000"
+                                  translations:
+                                      - language: "en"
+                                        alias: "example-blog-post"
+                                        title: "Example Blog Post"
+                                      - language: "it"
+                                        alias: "post-di-blog-esempio"
+                                        title: "Post di Blog Esempio"
+                                - post_id: "123e4567-e89b-12d3-a456-426614174001"
+                                  translations:
+                                      - language: "en"
+                                        alias: "another-blog-post"
+                                        title: "Another Blog Post"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Failed to get blog post aliases"
 
 components:
     schemas:
@@ -1041,7 +1305,7 @@ components:
                     format: uuid
                 status:
                     type: string
-                    enum: [DRAFT, PUBLISHED, ARCHIVED]
+                    enum: [DRAFT, PUBLISHED]
                 thumbnail_url:
                     type: string
                     format: uri
@@ -1057,6 +1321,16 @@ components:
                     type: integer
                     description: Estimated reading time in minutes
                     minimum: 1
+                    example: 5
+                comments_count:
+                    type: integer
+                    description: Number of approved comments on the post
+                    minimum: 0
+                    example: 12
+                pending_comments_count:
+                    type: integer
+                    description: Number of pending comments awaiting moderation (admin only)
+                    minimum: 0
                     example: 5
                 translations:
                     type: object
@@ -1088,7 +1362,15 @@ components:
                     type: string
                 alias:
                     type: string
-                    maxLength: 255
+                    maxLength: 100
+                    description: |
+                        SEO-friendly URL path segment.
+                        - Must be unique within each language
+                        - Max 100 characters
+                        - Only alphanumeric characters, hyphens, and underscores allowed
+                        - Spaces will be converted to hyphens
+                        - Will be converted to lowercase
+                    example: "my-blog-post-title"
                 seo:
                     type: object
                     required:
@@ -1124,6 +1406,10 @@ components:
                 category_id:
                     type: string
                     format: uuid
+                status:
+                    type: string
+                    enum: [DRAFT, PUBLISHED]
+                    description: Post status (defaults to DRAFT if not provided)
                 thumbnail_url:
                     type: string
                     format: uri

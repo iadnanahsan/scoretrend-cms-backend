@@ -12,6 +12,7 @@ import {
 } from "../types/blog.types"
 import {BlogStatus, CommentStatus, Prisma, UserRole} from "@prisma/client"
 import logger from "../utils/logger"
+import prisma from "../lib/prisma"
 
 export class BlogController {
 	private blogService: BlogService
@@ -21,11 +22,11 @@ export class BlogController {
 	}
 
 	/**
-	 * List blog categories
+	 * List blog categories with search and pagination
 	 */
 	public async listCategories(req: Request, res: Response): Promise<void> {
 		try {
-			const {page = 1, limit = 10, language} = req.query
+			const {page = 1, limit = 10, language, search} = req.query
 			const skip = (Number(page) - 1) * Number(limit)
 			const take = Number(limit)
 
@@ -33,12 +34,16 @@ export class BlogController {
 				skip,
 				take,
 				language: language as string | undefined,
+				search: search as string | undefined,
 			})
 
 			res.json(result)
 		} catch (error) {
 			logger.error("Error listing blog categories:", error)
-			res.status(500).json({error: "Failed to list blog categories"})
+			res.status(500).json({
+				error: "Failed to list blog categories",
+				message: "Failed to list blog categories",
+			})
 		}
 	}
 
@@ -301,7 +306,15 @@ export class BlogController {
 			// Start performance monitoring
 			const startTime = process.hrtime()
 
-			const result = await this.blogService.listPosts(validatedFilters)
+			// Pass authentication status to service
+			const isAuthenticated = !!req.user
+
+			// If user is an admin, set the flag to include pending comments count
+			if (req.user?.role === UserRole.ADMIN) {
+				validatedFilters.include_pending_comments = true
+			}
+
+			const result = await this.blogService.listPosts(validatedFilters, isAuthenticated)
 
 			// Calculate query execution time
 			const endTime = process.hrtime(startTime)
@@ -311,10 +324,12 @@ export class BlogController {
 			logger.info("Blog list query performance", {
 				executionTime: `${executionTime}ms`,
 				filters: validatedFilters,
-				resultCount: result.total,
+				resultCount: result.items.length,
+				totalCount: result.total,
 				userId: req.user?.id,
 			})
 
+			// Return the result
 			res.json(result)
 		} catch (error) {
 			logger.error("Error listing blog posts:", {
@@ -403,10 +418,15 @@ export class BlogController {
 	 */
 	public async getPostById(req: Request, res: Response): Promise<void> {
 		try {
-			const {id} = req.params
+			// Get the ID from params and normalize it to lowercase
+			const id = req.params.id.toLowerCase()
 			const {language} = req.query
 
-			const post = await this.blogService.getPostById(id, language as string)
+			// Check if user is authenticated
+			const isAuthenticated = !!req.user
+
+			const post = await this.blogService.getPostById(id, language as string, true, isAuthenticated, req, res)
+
 			if (!post) {
 				res.status(404).json({error: "Post not found"})
 				return
@@ -430,36 +450,100 @@ export class BlogController {
 	 */
 	public async updatePost(req: Request<{id: string}, {}, UpdateBlogPostRequest>, res: Response): Promise<void> {
 		try {
-			const {id} = req.params
+			// Get the ID from params and normalize it to lowercase
+			const id = req.params.id.toLowerCase()
+
+			// Add detailed debug logging
+			logger.debug(`[BlogController.updatePost] Attempting to update blog post with ID: ${id}`)
+			logger.debug(`[BlogController.updatePost] Request headers:`, req.headers)
+			logger.debug(`[BlogController.updatePost] Request user:`, req.user)
 
 			if (!req.user) {
-				res.status(401).json({error: "Authentication required"})
+				logger.debug(`[BlogController.updatePost] No authenticated user found`)
+				res.status(401).json({
+					error: "Authentication required",
+					message: "invalid token",
+					details: {
+						message: "You must be logged in to update a blog post",
+					},
+				})
 				return
 			}
 
+			// Log before getPostById call
+			logger.debug(`[BlogController.updatePost] Checking if post exists with ID: ${id}`)
+
+			// First try a direct database query to check if the post exists
+			const postExists = await prisma.blogPost.findUnique({
+				where: {id},
+				select: {
+					id: true,
+					author_id: true,
+					status: true,
+				},
+			})
+
+			logger.debug(`[BlogController.updatePost] Direct DB check result:`, postExists)
+
+			if (!postExists) {
+				logger.debug(`[BlogController.updatePost] Post not found with ID: ${id}`)
+				res.status(404).json({
+					error: "Post not found",
+					message: "post not found",
+					details: {
+						id: id,
+						message: "The requested blog post does not exist",
+					},
+				})
+				return
+			}
+
+			// Now get the full post with all related data
 			const post = await this.blogService.getPostById(id)
-			if (!post) {
-				res.status(404).json({error: "Post not found"})
+
+			// Log result of getPostById
+			logger.debug(`[BlogController.updatePost] getPostById result:`, post ? "Post found" : "Post not found")
+
+			// Check if user has permission to update this post
+			const isAdmin = req.user.role === UserRole.ADMIN
+			const isAuthor = postExists.author_id === req.user.id
+
+			if (!isAdmin && !isAuthor) {
+				logger.debug(`[BlogController.updatePost] User does not have permission to update this post`)
+				res.status(403).json({
+					error: "Insufficient permissions",
+					message: "insufficient permissions",
+					details: {
+						required_role: "ADMIN",
+						message: "Only the post author or an administrator can update this post",
+					},
+				})
 				return
 			}
 
-			// Only author or admin can update post
-			if (post.author_id !== req.user.id && req.user.role !== UserRole.ADMIN) {
-				res.status(403).json({error: "Insufficient permissions"})
-				return
-			}
-
+			// Update the post
 			const updatedPost = await this.blogService.updatePost(id, req.user.id, req.body)
 			res.json(updatedPost)
 		} catch (error) {
 			logger.error("Error updating blog post:", error)
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
 				if (error.code === "P2023") {
-					res.status(400).json({error: "Invalid post ID format"})
+					res.status(400).json({
+						error: "Invalid post ID format",
+						message: "invalid post id format",
+						details: {
+							field: "id",
+							message: "ID must be a valid UUID",
+						},
+					})
 					return
 				}
 			}
-			res.status(500).json({error: "Failed to update blog post"})
+			res.status(500).json({
+				error: "Failed to update blog post",
+				message: "failed to update blog post",
+				details: error instanceof Error ? error.message : "Unknown error occurred",
+			})
 		}
 	}
 
@@ -468,7 +552,8 @@ export class BlogController {
 	 */
 	public async deletePost(req: Request, res: Response): Promise<void> {
 		try {
-			const {id} = req.params
+			// Get the ID from params and normalize it to lowercase
+			const id = req.params.id.toLowerCase()
 
 			if (!req.user) {
 				res.status(401).json({
@@ -483,7 +568,7 @@ export class BlogController {
 				res.status(404).json({
 					error: "Blog post not found",
 					details: {
-						id: req.params.id,
+						id: id,
 						message: "The requested blog post does not exist or has already been deleted",
 					},
 				})
@@ -539,29 +624,73 @@ export class BlogController {
 	 */
 	public async getPostComments(req: Request, res: Response): Promise<void> {
 		try {
-			const {postId} = req.params
-			const {page = 1, limit = 10} = req.query
+			// Get the postId from params and normalize it to lowercase
+			const postId = req.params.postId.toLowerCase()
+
+			// First check if the post exists
+			const postExists = await this.blogService.checkPostExists(postId)
+			if (!postExists) {
+				res.status(404).json({
+					error: "Blog post not found",
+					message: "Blog post not found",
+				})
+				return
+			}
+
+			const {page = 1, limit = 10, status} = req.query
 			const skip = (Number(page) - 1) * Number(limit)
 			const take = Number(limit)
+
+			// Determine if the user is an admin
+			const isAdmin = req.user?.role === UserRole.ADMIN
+
+			// Add debugging logs
+			logger.debug(`getPostComments - User role: ${req.user?.role}, isAdmin: ${isAdmin}`)
+			logger.debug(`getPostComments - Request query: ${JSON.stringify(req.query)}`)
+
+			// Build the where clause based on user role and query parameters
+			let whereClause: any = {}
+
+			// If a specific status is requested and user is admin, filter by that status
+			if (isAdmin && status) {
+				whereClause.status = status
+				logger.debug(`getPostComments - Admin with status filter: ${status}`)
+			}
+			// If user is admin and no status specified, show all comments
+			else if (isAdmin) {
+				// No status filter for admins - they see all comments
+				logger.debug(`getPostComments - Admin with no status filter, showing all comments`)
+			}
+			// For non-admins, only show approved comments
+			else {
+				whereClause.status = CommentStatus.APPROVED
+				logger.debug(`getPostComments - Non-admin user, showing only APPROVED comments`)
+			}
+
+			logger.debug(`getPostComments - Final where clause: ${JSON.stringify(whereClause)}`)
 
 			const comments = await this.blogService.getPostComments(postId, {
 				skip,
 				take,
-				where: {
-					status: CommentStatus.APPROVED, // Only return approved comments for public view
-				},
+				where: whereClause,
 			})
+
+			logger.debug(`getPostComments - Found ${comments.total} comments`)
 
 			res.json(comments)
 		} catch (error) {
 			logger.error("Error getting post comments:", error)
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
 				if (error.code === "P2023") {
-					res.status(400).json({error: "Invalid post ID format"})
+					res.status(400).json({error: "Invalid post ID format", message: "Invalid post ID format"})
+					return
+				}
+				if (error.code === "P2003") {
+					res.status(404).json({error: "Blog post not found", message: "Blog post not found"})
 					return
 				}
 			}
-			res.status(500).json({error: "Failed to get post comments"})
+			res.status(500).json({error: "Failed to get post comments", message: "Failed to get post comments"})
 		}
 	}
 
@@ -570,15 +699,39 @@ export class BlogController {
 	 */
 	public async createComment(req: Request<{postId: string}, {}, CreateCommentRequest>, res: Response): Promise<void> {
 		try {
-			const {postId} = req.params
+			// Get the postId from params and normalize it to lowercase
+			const postId = req.params.postId.toLowerCase()
+
+			// First check if the post exists
+			const postExists = await this.blogService.checkPostExists(postId)
+			if (!postExists) {
+				res.status(404).json({
+					error: "Blog post not found",
+					message: "Blog post not found",
+				})
+				return
+			}
+
 			const {content, guest_name, reply_to} = req.body
+
+			// If reply_to is provided, check if the parent comment exists
+			if (reply_to) {
+				const commentExists = await this.blogService.checkCommentExists(reply_to)
+				if (!commentExists) {
+					res.status(404).json({
+						error: "Parent comment not found",
+						message: "Parent comment not found",
+					})
+					return
+				}
+			}
 
 			const comment = await this.blogService.createComment({
 				post_id: postId,
 				content,
 				guest_name,
 				reply_to,
-				status: CommentStatus.PENDING, // All guest comments start as pending
+				status: CommentStatus.PENDING, // Guest comments are set to PENDING by default for admin review
 			})
 
 			res.status(201).json(comment)
@@ -586,15 +739,18 @@ export class BlogController {
 			logger.error("Error creating comment:", error)
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
 				if (error.code === "P2023") {
-					res.status(400).json({error: "Invalid post or reply comment ID format"})
+					res.status(400).json({
+						error: "Invalid post or reply comment ID format",
+						message: "Invalid post or reply comment ID format",
+					})
 					return
 				}
 				if (error.code === "P2003") {
-					res.status(404).json({error: "Blog post not found"})
+					res.status(404).json({error: "Blog post not found", message: "Blog post not found"})
 					return
 				}
 			}
-			res.status(500).json({error: "Failed to create comment"})
+			res.status(500).json({error: "Failed to create comment", message: "Failed to create comment"})
 		}
 	}
 
@@ -603,11 +759,34 @@ export class BlogController {
 	 */
 	public async updateComment(req: Request<{id: string}, {}, UpdateCommentRequest>, res: Response): Promise<void> {
 		try {
-			const {id} = req.params
+			// Get the comment ID from params and normalize it to lowercase
+			const id = req.params.id.toLowerCase()
 			const {content} = req.body
 
 			if (!req.user) {
-				res.status(401).json({error: "Authentication required"})
+				res.status(401).json({
+					error: "Authentication required",
+					message: "Only administrators can update comments",
+				})
+				return
+			}
+
+			// Only admins can update comments
+			if (req.user.role !== UserRole.ADMIN) {
+				res.status(403).json({
+					error: "Insufficient permissions",
+					message: "Only administrators can update comments",
+				})
+				return
+			}
+
+			// Check if the comment exists
+			const commentExists = await this.blogService.checkCommentExists(id)
+			if (!commentExists) {
+				res.status(404).json({
+					error: "Comment not found",
+					message: "The comment you're trying to update doesn't exist",
+				})
 				return
 			}
 
@@ -617,11 +796,17 @@ export class BlogController {
 			logger.error("Error updating comment:", error)
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
 				if (error.code === "P2025") {
-					res.status(404).json({error: "Comment not found"})
+					res.status(404).json({
+						error: "Comment not found",
+						message: "The comment you're trying to update doesn't exist",
+					})
 					return
 				}
 			}
-			res.status(500).json({error: "Failed to update comment"})
+			res.status(500).json({
+				error: "Failed to update comment",
+				message: "Failed to update comment",
+			})
 		}
 	}
 
@@ -630,31 +815,66 @@ export class BlogController {
 	 */
 	public async moderateComment(req: Request<{id: string}, {}, ModerateCommentRequest>, res: Response): Promise<void> {
 		try {
-			const {id} = req.params
+			// Get the comment ID from params and normalize it to lowercase
+			const id = req.params.id.toLowerCase()
 			const {status} = req.body
 
 			if (!req.user) {
-				res.status(401).json({error: "Authentication required"})
+				res.status(401).json({
+					error: "Authentication required",
+					message: "You must be logged in to moderate comments",
+				})
 				return
 			}
 
 			// Only admins can moderate comments
 			if (req.user.role !== UserRole.ADMIN) {
-				res.status(403).json({error: "Insufficient permissions"})
+				res.status(403).json({
+					error: "Insufficient permissions",
+					message: "Only administrators can moderate comments",
+				})
+				return
+			}
+
+			// Check if the comment exists
+			const commentExists = await this.blogService.checkCommentExists(id)
+			if (!commentExists) {
+				res.status(404).json({
+					error: "Comment not found",
+					message: "The comment you're trying to moderate doesn't exist",
+				})
 				return
 			}
 
 			const comment = await this.blogService.moderateComment(id, status)
-			res.json(comment)
+			res.json({
+				success: true,
+				message: `Comment status updated to ${status}`,
+				comment,
+			})
 		} catch (error) {
 			logger.error("Error moderating comment:", error)
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
+				if (error.code === "P2023") {
+					res.status(400).json({
+						error: "Invalid comment ID format",
+						message: "The comment ID provided is not in a valid format",
+					})
+					return
+				}
 				if (error.code === "P2025") {
-					res.status(404).json({error: "Comment not found"})
+					res.status(404).json({
+						error: "Comment not found",
+						message: "The comment you're trying to moderate doesn't exist",
+					})
 					return
 				}
 			}
-			res.status(500).json({error: "Failed to moderate comment"})
+			res.status(500).json({
+				error: "Failed to moderate comment",
+				message: "There was a problem updating the comment status. Please try again later.",
+				errorCode: error instanceof Error ? error.message : "Unknown error",
+			})
 		}
 	}
 
@@ -666,21 +886,116 @@ export class BlogController {
 			const {id} = req.params
 
 			if (!req.user) {
-				res.status(401).json({error: "Authentication required"})
+				res.status(401).json({
+					error: "Authentication required",
+					message: "You must be logged in to delete comments",
+				})
+				return
+			}
+
+			// Check if the comment exists before deleting
+			const commentExists = await this.blogService.checkCommentExists(id)
+			if (!commentExists) {
+				res.status(404).json({
+					error: "Comment not found",
+					message: "The comment you're trying to delete doesn't exist or has already been removed",
+				})
 				return
 			}
 
 			await this.blogService.deleteComment(id)
-			res.status(204).send()
+			res.status(200).json({
+				success: true,
+				message: "Comment deleted successfully",
+				deletedCommentId: id,
+			})
 		} catch (error) {
 			logger.error("Error deleting comment:", error)
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
 				if (error.code === "P2025") {
-					res.status(404).json({error: "Comment not found"})
+					res.status(404).json({
+						error: "Comment not found",
+						message: "The comment you're trying to delete doesn't exist or has already been removed",
+					})
 					return
 				}
 			}
-			res.status(500).json({error: "Failed to delete comment"})
+			res.status(500).json({
+				error: "Failed to delete comment",
+				message: "There was a problem deleting the comment. Please try again later.",
+				errorCode: error instanceof Error ? error.message : "Unknown error",
+			})
+		}
+	}
+
+	/**
+	 * Get blog post by alias
+	 */
+	public async getPostByAlias(req: Request, res: Response): Promise<void> {
+		try {
+			// Get the alias from params
+			const alias = req.params.alias
+			const {language} = req.query
+
+			if (!language || typeof language !== "string") {
+				res.status(400).json({error: "Language parameter is required"})
+				return
+			}
+
+			// Check if user is authenticated
+			const isAuthenticated = !!req.user
+
+			const post = await this.blogService.getPostByAlias(alias, language, true, isAuthenticated, req, res)
+
+			if (!post) {
+				res.status(404).json({error: "Post not found"})
+				return
+			}
+
+			res.json(post)
+		} catch (error) {
+			logger.error("Error getting blog post by alias:", error)
+			if (error instanceof Error) {
+				if (error.message.includes("Language parameter is required")) {
+					res.status(400).json({error: "Language parameter is required"})
+					return
+				}
+			}
+			res.status(500).json({error: "Failed to get blog post"})
+		}
+	}
+
+	/**
+	 * Get all blog post aliases
+	 */
+	public async getAllAliases(req: Request, res: Response): Promise<void> {
+		try {
+			const groupedAliases = await this.blogService.getGroupedAliases()
+			res.json(groupedAliases)
+		} catch (error) {
+			logger.error("Error getting all blog post aliases:", error)
+			if (error instanceof Error) {
+				res.status(400).json({error: error.message})
+				return
+			}
+			res.status(500).json({error: "Failed to get blog post aliases"})
+		}
+	}
+
+	/**
+	 * Get all blog post aliases grouped by post
+	 */
+	public async getGroupedAliases(req: Request, res: Response): Promise<void> {
+		try {
+			const groupedAliases = await this.blogService.getGroupedAliases()
+			res.json(groupedAliases)
+		} catch (error) {
+			logger.error("Error getting grouped blog post aliases:", error)
+			if (error instanceof Error) {
+				res.status(400).json({error: error.message})
+				return
+			}
+			res.status(500).json({error: "Failed to get grouped blog post aliases"})
 		}
 	}
 }

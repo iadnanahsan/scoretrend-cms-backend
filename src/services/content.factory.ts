@@ -214,6 +214,8 @@ export class ContentFactory {
 
 	private static createTimelineSection(data: any): ContentSection {
 		return {
+			title: data.title,
+			description: data.description,
 			events: data.items?.map((item: any) => ({
 				title: item.title,
 				description: item.description,
@@ -477,6 +479,10 @@ export class ContentFactory {
 						lng: data.mapCoordinates.lng,
 				  }
 				: undefined,
+			social_links: data.social_links?.map((link: any) => ({
+				platform: link.platform,
+				url: link.url,
+			})),
 		}
 	}
 

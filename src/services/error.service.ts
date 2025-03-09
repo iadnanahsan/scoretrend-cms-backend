@@ -266,6 +266,8 @@ function getFieldHelpMessage(error: ValidationFieldError): string {
 				messages.push(`Invalid field name. Button properties should be nested under a 'button' object`)
 				messages.push(`Use 'button.text' instead of 'youtubeButtonTitle'`)
 				messages.push(`Use 'button.url' instead of 'youtubeButtonLink'`)
+			} else if (error.field.startsWith("items.") && error.field.includes("date")) {
+				messages.push(`Each timeline item must have a date in ISO format (e.g., '2025-03-14T19:38:00.000Z')`)
 			}
 			if (error.example) {
 				messages.push(`Example: ${error.example}`)

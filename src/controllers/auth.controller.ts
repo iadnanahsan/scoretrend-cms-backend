@@ -7,6 +7,7 @@ import {EmailService} from "../services/email.service"
 import logger from "../utils/logger"
 import {UserService} from "../services/user.service"
 import {AuthService} from "../services/auth.service"
+import jwt from "jsonwebtoken"
 
 export class AuthController {
 	private prisma: PrismaClient
@@ -61,10 +62,6 @@ export class AuthController {
 				name: user.name,
 				role: user.role,
 				status: user.status,
-				email_verified: user.email_verified,
-				email_verified_at: user.email_verified_at,
-				verification_token: user.verification_token,
-				verification_expires: user.verification_expires,
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 			}
@@ -75,11 +72,17 @@ export class AuthController {
 				user: userResponse,
 			}
 
-			// Send welcome email asynchronously without waiting
-			this.emailService.sendWelcomeEmail(user.email, user.name).catch((error) => {
-				logger.error("Failed to send welcome email:", error)
-				// Don't throw error, just log it since user is already created
-			})
+			// Check if email service is available before attempting to send
+			if (this.emailService.isServiceAvailable()) {
+				// Send welcome email asynchronously without waiting
+				this.emailService.sendWelcomeEmail(user.email, user.name).catch((error) => {
+					logger.error("Failed to send welcome email:", error)
+					// Don't throw error, just log it since user is already created
+				})
+			} else {
+				logger.warn(`Email service unavailable - welcome email not sent to ${user.email}`)
+				// Still continue with registration
+			}
 
 			// Return success response immediately
 			return res.status(201).json(response)
@@ -103,10 +106,6 @@ export class AuthController {
 							name: user.name,
 							role: user.role,
 							status: user.status,
-							email_verified: user.email_verified,
-							email_verified_at: user.email_verified_at,
-							verification_token: user.verification_token,
-							verification_expires: user.verification_expires,
 							created_at: user.created_at,
 							updated_at: user.updated_at,
 						}
@@ -148,10 +147,6 @@ export class AuthController {
 				name: user.name,
 				role: user.role,
 				status: user.status,
-				email_verified: user.email_verified,
-				email_verified_at: user.email_verified_at,
-				verification_token: user.verification_token,
-				verification_expires: user.verification_expires,
 				created_at: user.created_at,
 				updated_at: user.updated_at,
 			}
@@ -190,14 +185,38 @@ export class AuthController {
 				})
 			}
 
-			// Generate reset token
-			const resetToken = this.authService.generateToken({
-				...user,
-				role: user.role, // Ensure role is properly typed
-			})
+			// Generate reset token with 1-hour expiration
+			const resetToken = jwt.sign(
+				{
+					id: user.id,
+					email: user.email,
+					role: user.role,
+				},
+				process.env.JWT_SECRET!,
+				{expiresIn: "1h"}
+			)
+
+			// Check if email service is available
+			if (!this.emailService.isServiceAvailable()) {
+				logger.error(`CRITICAL: Cannot send password reset email to ${email} - Email service unavailable`)
+				return res.status(503).json({
+					status: "error",
+					message: "Email service is currently unavailable. Please try again later or contact support.",
+					code: "EMAIL_SERVICE_UNAVAILABLE",
+				})
+			}
 
 			// Send reset email
-			await this.emailService.sendPasswordResetEmail(user.email, user.name, resetToken)
+			const emailSent = await this.emailService.sendPasswordResetEmail(user.email, user.name, resetToken)
+
+			if (!emailSent) {
+				logger.error(`Failed to send password reset email to ${email}`)
+				return res.status(500).json({
+					status: "error",
+					message: "Failed to send password reset email. Please try again later.",
+					code: "EMAIL_DELIVERY_FAILED",
+				})
+			}
 
 			return res.status(200).json({
 				message: "If your email is registered, you will receive password reset instructions",
@@ -244,47 +263,8 @@ export class AuthController {
 	}
 
 	public logout = async (req: Request, res: Response) => {
-		// Since we're using JWT, we just return success
-		// Client should remove the token
 		return res.status(200).json({
 			message: "Logged out successfully",
 		})
-	}
-
-	// Verify email
-	public async verifyEmail(req: Request, res: Response): Promise<void> {
-		try {
-			const {token} = req.body
-			const user = await this.userService.verifyEmail(token)
-			res.json({
-				message: "Email verified successfully",
-				user,
-			})
-		} catch (error) {
-			logger.error("Error verifying email:", error)
-			if (error instanceof Error) {
-				res.status(400).json({error: error.message})
-				return
-			}
-			res.status(500).json({error: "Failed to verify email"})
-		}
-	}
-
-	// Resend verification email
-	public async resendVerification(req: Request, res: Response): Promise<void> {
-		try {
-			const {email} = req.body
-			await this.userService.resendVerification(email)
-			res.json({
-				message: "If your email is registered and not verified, you will receive a verification email",
-			})
-		} catch (error) {
-			logger.error("Error resending verification:", error)
-			if (error instanceof Error) {
-				res.status(400).json({error: error.message})
-				return
-			}
-			res.status(500).json({error: "Failed to resend verification email"})
-		}
 	}
 }

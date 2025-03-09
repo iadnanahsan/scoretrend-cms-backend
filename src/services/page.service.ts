@@ -153,6 +153,83 @@ export class PageService {
 	}
 
 	/**
+	 * Check if page alias is unique across all pages
+	 */
+	private async isAliasUnique(alias: string, pageId?: string, language?: string): Promise<boolean> {
+		// Add detailed debug logging
+		logger.debug(
+			`[PageService.isAliasUnique] Checking if alias "${alias}" is unique${
+				pageId ? ` (excluding pageId: ${pageId})` : ""
+			}`
+		)
+
+		// Find any page translation with the same alias (case insensitive)
+		const existingTranslation = await prisma.pageTranslation.findFirst({
+			where: {
+				alias: {
+					equals: alias,
+					mode: "insensitive", // Case-insensitive matching
+				},
+				// Exclude the current page translation if updating
+				...(pageId && language
+					? {
+							NOT: {
+								AND: [{page_id: pageId}, {language: language}],
+							},
+					  }
+					: {}),
+			},
+			select: {
+				id: true,
+				page_id: true,
+				language: true,
+			},
+		})
+
+		// If we found a translation with this alias, it's not unique
+		const isUnique = !existingTranslation
+
+		logger.debug(`[PageService.isAliasUnique] Alias "${alias}" is ${isUnique ? "unique" : "not unique"}`)
+		if (!isUnique) {
+			logger.debug(`[PageService.isAliasUnique] Existing translation found:`, existingTranslation)
+		}
+
+		return isUnique
+	}
+
+	/**
+	 * Validate and sanitize page alias
+	 * - Replaces spaces with hyphens
+	 * - Converts to lowercase
+	 * - Ensures proper length (max 50 chars for pages)
+	 * - Allows only alphanumeric, hyphens, and underscores
+	 */
+	private validateAlias(alias: string): string {
+		if (!alias) {
+			throw new Error("Alias is required")
+		}
+
+		// Replace spaces with hyphens and convert to lowercase
+		let sanitizedAlias = alias.trim().replace(/\s+/g, "-").toLowerCase()
+
+		// Remove any characters that aren't alphanumeric, hyphens, or underscores
+		sanitizedAlias = sanitizedAlias.replace(/[^a-z0-9-_]/g, "")
+
+		// Check length (max 50 chars for pages)
+		const MAX_PAGE_ALIAS_LENGTH = 50
+		if (sanitizedAlias.length > MAX_PAGE_ALIAS_LENGTH) {
+			throw new Error(`Page alias cannot exceed ${MAX_PAGE_ALIAS_LENGTH} characters`)
+		}
+
+		// Ensure alias isn't empty after sanitization
+		if (!sanitizedAlias) {
+			throw new Error("Alias must contain at least one alphanumeric character")
+		}
+
+		return sanitizedAlias
+	}
+
+	/**
 	 * Update page translation
 	 */
 	async updatePageTranslation(
@@ -166,6 +243,38 @@ export class PageService {
 		}
 
 		try {
+			// Get the page to check its type
+			const page = await prisma.page.findUnique({
+				where: {id: pageId},
+				select: {type: true},
+			})
+
+			if (!page) {
+				throw new Error("Page not found")
+			}
+
+			let sanitizedAlias
+
+			// For HOME page type, use a placeholder value and skip validation
+			if (page.type === PageType.HOME) {
+				// Use a placeholder that won't be exposed to frontend
+				sanitizedAlias = `home-${language}-placeholder`
+				logger.debug(
+					`[PageService.updatePageTranslation] Using placeholder alias for HOME page: ${sanitizedAlias}`
+				)
+			} else {
+				// For other page types, validate and sanitize alias
+				sanitizedAlias = this.validateAlias(data.alias)
+
+				// Check if alias is unique across all pages
+				const isUnique = await this.isAliasUnique(sanitizedAlias, pageId, language)
+				if (!isUnique) {
+					throw new Error(
+						`Page alias "${sanitizedAlias}" already exists. Each page must have a unique alias.`
+					)
+				}
+			}
+
 			return await prisma.pageTranslation.upsert({
 				where: {
 					page_id_language: {
@@ -174,18 +283,21 @@ export class PageService {
 					},
 				},
 				update: {
-					alias: data.alias,
+					alias: sanitizedAlias,
 					seo_data: data.seo_data as Prisma.JsonObject,
 				},
 				create: {
 					page_id: pageId,
 					language,
-					alias: data.alias,
+					alias: sanitizedAlias,
 					seo_data: data.seo_data as Prisma.JsonObject,
 				},
 			})
 		} catch (error) {
 			logger.error("Error updating page translation:", error)
+			if (error instanceof Error && (error.message.includes("Page alias") || error.message.includes("Alias"))) {
+				throw error
+			}
 			throw new Error("Failed to update page translation")
 		}
 	}
@@ -193,10 +305,20 @@ export class PageService {
 	/**
 	 * Get page SEO data
 	 */
-	async getPageSEO(pageId: string, language: string): Promise<SEOData> {
+	async getPageSEO(pageId: string, language: string): Promise<SEOData & {alias: string | null}> {
 		// Validate language
 		if (!LanguageService.isValidLanguage(language)) {
 			throw new Error(`Unsupported language: ${language}`)
+		}
+
+		// First get the page to check its type
+		const page = await prisma.page.findUnique({
+			where: {id: pageId},
+			select: {type: true},
+		})
+
+		if (!page) {
+			throw new Error("Page not found")
 		}
 
 		const translation = await prisma.pageTranslation.findUnique({
@@ -208,6 +330,7 @@ export class PageService {
 			},
 			select: {
 				seo_data: true,
+				alias: true,
 			},
 		})
 
@@ -215,13 +338,30 @@ export class PageService {
 			throw new Error("Page translation not found")
 		}
 
-		return translation.seo_data as unknown as SEOData
+		// For HOME page type, return null for alias
+		if (page.type === PageType.HOME) {
+			return {
+				...(translation.seo_data as unknown as SEOData),
+				alias: null,
+			}
+		}
+
+		// For other page types, return the alias as usual
+		return {
+			...(translation.seo_data as unknown as SEOData),
+			alias: translation.alias,
+		}
 	}
 
 	/**
 	 * Update page SEO data
 	 */
-	async updatePageSEO(pageId: string, language: string, seoData: JsonSEOData): Promise<PageTranslation> {
+	async updatePageSEO(
+		pageId: string,
+		language: string,
+		seoData: JsonSEOData,
+		alias?: string
+	): Promise<PageTranslation> {
 		// Validate language
 		if (!LanguageService.isValidLanguage(language)) {
 			throw new Error(`Unsupported language: ${language}`)
@@ -248,6 +388,27 @@ export class PageService {
 				select: {alias: true},
 			})
 
+			// Handle alias if provided
+			let sanitizedAlias = existingTranslation?.alias || `${page.type.toLowerCase()}-${language}`
+
+			// For HOME page type, use a placeholder value and skip validation
+			if (page.type === PageType.HOME) {
+				// Use a placeholder that won't be exposed to frontend
+				sanitizedAlias = `home-${language}-placeholder`
+				logger.debug(`[PageService.updatePageSEO] Using placeholder alias for HOME page: ${sanitizedAlias}`)
+			} else if (alias) {
+				// For other page types, validate and sanitize alias if provided
+				sanitizedAlias = this.validateAlias(alias)
+
+				// Check if alias is unique across all pages
+				const isUnique = await this.isAliasUnique(sanitizedAlias, pageId, language)
+				if (!isUnique) {
+					throw new Error(
+						`Page alias "${sanitizedAlias}" already exists. Each page must have a unique alias.`
+					)
+				}
+			}
+
 			return await prisma.pageTranslation.upsert({
 				where: {
 					page_id_language: {
@@ -257,11 +418,12 @@ export class PageService {
 				},
 				update: {
 					seo_data: seoData as Prisma.JsonObject,
+					alias: sanitizedAlias,
 				},
 				create: {
 					page_id: pageId,
 					language,
-					alias: existingTranslation?.alias || `${page.type.toLowerCase()}-${language}`, // Generate default alias
+					alias: sanitizedAlias,
 					seo_data: seoData as Prisma.JsonObject,
 				},
 			})
@@ -332,8 +494,12 @@ export class PageService {
 
 				for (const section of sections) {
 					// Special case: Allow multiple STANDINGS sections for HOW_IT_WORKS page
-					if (page.type === PageType.HOW_IT_WORKS && section.type === SectionType.STANDINGS) {
-						// Skip duplicate check for STANDINGS in HOW_IT_WORKS page
+					// Special case: Allow multiple TIMELINE sections for NEWS page
+					if (
+						(page.type === PageType.HOW_IT_WORKS && section.type === SectionType.STANDINGS) ||
+						(page.type === PageType.NEWS && section.type === SectionType.TIMELINE)
+					) {
+						// Skip duplicate check for special cases
 						continue
 					}
 
@@ -358,6 +524,190 @@ export class PageService {
 		} catch (error) {
 			logger.error("Error initializing page sections:", error)
 			throw new Error(error instanceof Error ? error.message : "Failed to initialize page sections")
+		}
+	}
+
+	/**
+	 * Get page by alias
+	 */
+	async getPageByAlias(alias: string, language: string): Promise<Page | null> {
+		try {
+			// Validate language
+			if (!LanguageService.isValidLanguage(language)) {
+				throw new Error(`Unsupported language: ${language}`)
+			}
+
+			// Add detailed debug logging
+			logger.debug(`[PageService.getPageByAlias] Looking up page with alias: ${alias} in language: ${language}`)
+
+			// Find the page translation with the matching alias
+			const pageTranslation = await prisma.pageTranslation.findFirst({
+				where: {
+					alias: {
+						equals: alias,
+						mode: "insensitive", // Case-insensitive matching
+					},
+					language: language,
+				},
+				include: {
+					page: {
+						include: {
+							translations: {
+								where: {
+									language,
+								},
+							},
+							sections: {
+								include: {
+									translations: {
+										where: {
+											language,
+										},
+									},
+								},
+								orderBy: {
+									order_index: "asc",
+								},
+							},
+						},
+					},
+				},
+			})
+
+			logger.debug(
+				`[PageService.getPageByAlias] Database result:`,
+				pageTranslation ? "Page found" : "Page not found"
+			)
+
+			if (!pageTranslation) {
+				return null
+			}
+
+			return pageTranslation.page
+		} catch (error) {
+			logger.error("Error getting page by alias:", error)
+			throw error
+		}
+	}
+
+	/**
+	 * Get all page aliases
+	 * Returns a list of all page aliases with their corresponding page types and languages
+	 * Note: HOME page type is excluded as its aliases are managed on the frontend
+	 */
+	async getAllAliases(): Promise<Array<{alias: string; page_type: PageType; language: string; page_id: string}>> {
+		try {
+			const translations = await prisma.pageTranslation.findMany({
+				select: {
+					alias: true,
+					language: true,
+					page_id: true,
+					page: {
+						select: {
+							type: true,
+						},
+					},
+				},
+				where: {
+					page: {
+						type: {
+							not: PageType.HOME, // Exclude HOME page type
+						},
+					},
+				},
+				orderBy: {
+					language: "asc",
+				},
+			})
+
+			// Format the response
+			return translations.map((translation) => ({
+				alias: translation.alias,
+				page_type: translation.page.type,
+				language: translation.language,
+				page_id: translation.page_id,
+			}))
+		} catch (error) {
+			logger.error("Error getting all page aliases:", error)
+			throw new Error("Failed to get page aliases")
+		}
+	}
+
+	/**
+	 * Get all page aliases grouped by page
+	 * Returns a list of pages with their translations grouped together
+	 * Note: HOME page type is excluded as its aliases are managed on the frontend
+	 */
+	async getGroupedAliases(): Promise<
+		Array<{
+			page_id: string
+			page_type: PageType
+			translations: Array<{
+				language: string
+				alias: string
+			}>
+		}>
+	> {
+		try {
+			const translations = await prisma.pageTranslation.findMany({
+				select: {
+					alias: true,
+					language: true,
+					page_id: true,
+					page: {
+						select: {
+							type: true,
+						},
+					},
+				},
+				where: {
+					page: {
+						type: {
+							not: PageType.HOME, // Exclude HOME page type
+						},
+					},
+				},
+				orderBy: [{page_id: "asc"}, {language: "asc"}],
+			})
+
+			// Group by page_id
+			const groupedByPage = translations.reduce(
+				(acc, translation) => {
+					const pageId = translation.page_id
+
+					if (!acc[pageId]) {
+						acc[pageId] = {
+							page_id: pageId,
+							page_type: translation.page.type,
+							translations: [],
+						}
+					}
+
+					acc[pageId].translations.push({
+						language: translation.language,
+						alias: translation.alias,
+					})
+
+					return acc
+				},
+				{} as Record<
+					string,
+					{
+						page_id: string
+						page_type: PageType
+						translations: Array<{
+							language: string
+							alias: string
+						}>
+					}
+				>
+			)
+
+			// Convert to array
+			return Object.values(groupedByPage)
+		} catch (error) {
+			logger.error("Error getting grouped page aliases:", error)
+			throw new Error("Failed to get grouped page aliases")
 		}
 	}
 }

@@ -91,8 +91,8 @@ export class PageController {
 				return
 			}
 
-			const seoData = await this.pageService.getPageSEO(pageId, language)
-			res.json(seoData)
+			const seoDataWithAlias = await this.pageService.getPageSEO(pageId, language)
+			res.json(seoDataWithAlias)
 		} catch (error) {
 			logger.error("Error getting page SEO:", error)
 			if (error instanceof Error) {
@@ -112,6 +112,8 @@ export class PageController {
 			const {language} = req.query
 			// Handle both formats: direct SEO data or wrapped in seo_data
 			const seo_data = req.body.seo_data || req.body
+			// Get alias if provided
+			const alias = req.body.alias
 
 			if (!language || typeof language !== "string") {
 				res.status(400).json({error: "Language parameter is required"})
@@ -220,7 +222,7 @@ export class PageController {
 				return
 			}
 
-			const translation = await this.pageService.updatePageSEO(pageId, language, seo_data)
+			const translation = await this.pageService.updatePageSEO(pageId, language, seo_data, alias)
 			res.json(translation)
 		} catch (error) {
 			logger.error("Error updating page SEO:", error)
@@ -246,6 +248,71 @@ export class PageController {
 				return
 			}
 			res.status(500).json({error: "Failed to initialize fixed pages"})
+		}
+	}
+
+	/**
+	 * Get page by alias
+	 */
+	public async getPageByAlias(req: Request, res: Response): Promise<void> {
+		try {
+			const {alias} = req.params
+			const {language} = req.query
+
+			if (!language || typeof language !== "string") {
+				res.status(400).json({error: "Language parameter is required"})
+				return
+			}
+
+			const page = await this.pageService.getPageByAlias(alias, language)
+
+			if (!page) {
+				res.status(404).json({error: "Page not found"})
+				return
+			}
+
+			res.json(page)
+		} catch (error) {
+			logger.error("Error getting page by alias:", error)
+			if (error instanceof Error) {
+				res.status(400).json({error: error.message})
+				return
+			}
+			res.status(500).json({error: "Failed to get page by alias"})
+		}
+	}
+
+	/**
+	 * Get all page aliases
+	 */
+	public async getAllAliases(req: Request, res: Response): Promise<void> {
+		try {
+			const groupedAliases = await this.pageService.getGroupedAliases()
+			res.json(groupedAliases)
+		} catch (error) {
+			logger.error("Error getting all page aliases:", error)
+			if (error instanceof Error) {
+				res.status(400).json({error: error.message})
+				return
+			}
+			res.status(500).json({error: "Failed to get page aliases"})
+		}
+	}
+
+	/**
+	 * Get all page aliases grouped by page
+	 */
+	public async getGroupedAliases(req: Request, res: Response): Promise<void> {
+		try {
+			const groupedAliases = await this.pageService.getGroupedAliases()
+			res.json(groupedAliases)
+		} catch (error) {
+			logger.error("Error getting grouped page aliases:", error)
+			if (error instanceof Error) {
+				res.status(400).json({error: error.message})
+				return
+			}
+			res.status(500).json({error: "Failed to get grouped page aliases"})
 		}
 	}
 }

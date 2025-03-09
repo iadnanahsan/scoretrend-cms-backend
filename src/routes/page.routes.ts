@@ -21,6 +21,37 @@ const asyncHandler =
 		}
 	}
 
+// Get all page aliases - IMPORTANT: This route must be defined BEFORE the /:pageType route
+router.get(
+	"/aliases",
+	publicEndpointLimiter,
+	publicOrAuthenticated as RequestHandler,
+	asyncHandler(async (req: Request, res: Response): Promise<any> => {
+		await pageController.getAllAliases(req, res)
+	})
+)
+
+// Get page by alias - IMPORTANT: This route must be defined BEFORE the /:pageType route
+router.get(
+	"/by-alias/:alias",
+	publicEndpointLimiter,
+	publicOrAuthenticated as RequestHandler,
+	validateLanguage() as RequestHandler,
+	asyncHandler(async (req: Request, res: Response): Promise<any> => {
+		await pageController.getPageByAlias(req, res)
+	})
+)
+
+// Initialize fixed pages (Admin only)
+router.post(
+	"/initialize",
+	authenticate as RequestHandler,
+	authorize([UserRole.ADMIN]) as RequestHandler,
+	asyncHandler(async (req: Request, res: Response): Promise<any> => {
+		await pageController.initializeFixedPages(req, res)
+	})
+)
+
 // Get page content
 router.get(
 	"/:pageType",
@@ -28,45 +59,6 @@ router.get(
 	publicOrAuthenticated as RequestHandler,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await pageController.getPageContent(req, res)
-	})
-)
-
-// Get page content by language
-router.get(
-	"/:pageType/translations/:lang",
-	publicEndpointLimiter,
-	publicOrAuthenticated as RequestHandler,
-	asyncHandler(async (req: Request, res: Response): Promise<any> => {
-		req.query.language = req.params.lang
-		await pageController.getPageContent(req, res)
-	})
-)
-
-// New cleaner translation update endpoint
-router.put(
-	"/:pageId",
-	authenticate as RequestHandler,
-	authorize([UserRole.ADMIN]) as RequestHandler,
-	validateUUID("pageId") as RequestHandler,
-	validateLanguage() as RequestHandler,
-	asyncHandler(async (req: Request, res: Response): Promise<any> => {
-		await pageController.updatePageTranslation(req, res)
-	})
-)
-
-// Update page translation with path param (deprecated but maintained for backward compatibility)
-router.put(
-	"/:pageId/translations/:lang",
-	authenticate as RequestHandler,
-	authorize([UserRole.ADMIN]) as RequestHandler,
-	asyncHandler(async (req: Request, res: Response): Promise<any> => {
-		// Add deprecation warning header
-		res.setHeader(
-			"Warning",
-			'299 - "This endpoint is deprecated, use PUT /api/v1/cms/pages/{pageId}?language=xx instead"'
-		)
-		req.body.language = req.params.lang
-		await pageController.updatePageTranslation(req, res)
 	})
 )
 
@@ -82,7 +74,7 @@ router.get(
 	})
 )
 
-// Update page SEO data
+// Update page SEO data (now includes alias)
 router.put(
 	"/:pageId/seo",
 	authenticate as RequestHandler,
@@ -91,16 +83,6 @@ router.put(
 	validateLanguage() as RequestHandler,
 	asyncHandler(async (req: Request, res: Response): Promise<any> => {
 		await pageController.updatePageSEO(req, res)
-	})
-)
-
-// Initialize fixed pages (Admin only)
-router.post(
-	"/initialize",
-	authenticate as RequestHandler,
-	authorize([UserRole.ADMIN]) as RequestHandler,
-	asyncHandler(async (req: Request, res: Response): Promise<any> => {
-		await pageController.initializeFixedPages(req, res)
 	})
 )
 

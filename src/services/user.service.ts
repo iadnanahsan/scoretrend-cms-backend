@@ -1,9 +1,12 @@
 import {User, UserRole, UserStatus, Prisma} from "@prisma/client"
-import prisma from "../lib/prisma"
 import {EmailService} from "./email.service"
+import prisma from "../lib/prisma"
 import {AuthService} from "./auth.service"
+import acceptLanguage from "accept-language"
+import {LanguageService} from "./language.service"
 import logger from "../utils/logger"
-import {randomBytes} from "crypto"
+import crypto from "crypto"
+import bcrypt from "bcrypt"
 
 export class UserService {
 	private emailService: EmailService
@@ -78,96 +81,22 @@ export class UserService {
 		}
 	}
 
-	// User Registration and Verification Methods
+	// User Registration Method
 	async createUser(data: {email: string; password: string; name: string; role?: UserRole}): Promise<User> {
-		const verificationToken = randomBytes(32).toString("hex")
-		const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-
+		// Create user with active status
 		const user = await prisma.user.create({
 			data: {
 				email: data.email,
-				password: data.password,
+				password: data.password, // Password should already be hashed by the controller
 				name: data.name,
 				role: data.role || UserRole.AUTHOR,
-				status: UserStatus.INACTIVE,
-				email_verified: false,
-				verification_token: verificationToken,
-				verification_expires: verificationExpires,
+				status: UserStatus.ACTIVE,
 			} satisfies Prisma.UserCreateInput,
 		})
 
-		// Send verification email
-		await this.emailService.sendEmail({
-			to: user.email,
-			subject: "Verify your email",
-			html: `Hello ${user.name},<br><br>Please verify your email by clicking this link: <a href="${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}">Verify Email</a>`,
-		})
+		// Send welcome email
+		await this.emailService.sendWelcomeEmail(user.email, user.name)
 
 		return user
-	}
-
-	async verifyEmail(token: string): Promise<User> {
-		const user = await prisma.user.findFirst({
-			where: {
-				verification_token: token,
-				verification_expires: {
-					gt: new Date(),
-				},
-			} satisfies Prisma.UserWhereInput,
-		})
-
-		if (!user) {
-			throw new Error("Invalid or expired verification token")
-		}
-
-		if (user.email_verified) {
-			throw new Error("Email already verified")
-		}
-
-		return await prisma.user.update({
-			where: {id: user.id},
-			data: {
-				status: UserStatus.ACTIVE,
-				email_verified: true,
-				email_verified_at: new Date(),
-				verification_token: null,
-				verification_expires: null,
-			} satisfies Prisma.UserUpdateInput,
-		})
-	}
-
-	async resendVerification(email: string): Promise<void> {
-		const user = await prisma.user.findUnique({
-			where: {email},
-		})
-
-		if (!user) {
-			// Silent fail to prevent email enumeration
-			return
-		}
-
-		if (user.email_verified) {
-			throw new Error("Email already verified")
-		}
-
-		// Generate new verification token
-		const verificationToken = randomBytes(32).toString("hex")
-		const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-
-		// Update user with new verification token
-		await prisma.user.update({
-			where: {id: user.id},
-			data: {
-				verification_token: verificationToken,
-				verification_expires: verificationExpires,
-			} satisfies Prisma.UserUpdateInput,
-		})
-
-		// Send verification email
-		await this.emailService.sendEmail({
-			to: user.email,
-			subject: "Verify your email",
-			html: `Hello ${user.name},<br><br>Please verify your email by clicking this link: <a href="${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}">Verify Email</a>`,
-		})
 	}
 }

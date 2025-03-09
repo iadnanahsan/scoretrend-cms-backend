@@ -17,13 +17,13 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
 		const authHeader = req.headers.authorization
 
 		if (!authHeader?.startsWith("Bearer ")) {
-			return res.status(401).json({error: "No token provided"})
+			return res.status(401).json({error: "No token provided", message: "invalid token"})
 		}
 
 		const token = authHeader.split(" ")[1]
 
 		if (!token) {
-			return res.status(401).json({error: "No token provided"})
+			return res.status(401).json({error: "No token provided", message: "invalid token"})
 		}
 
 		try {
@@ -32,11 +32,11 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
 			next()
 		} catch (error) {
 			logger.error("Token verification failed:", error)
-			return res.status(401).json({error: "Invalid token"})
+			return res.status(401).json({error: "Invalid token", message: "invalid token"})
 		}
 	} catch (error) {
 		logger.error("Authentication error:", error)
-		return res.status(500).json({error: "Authentication failed"})
+		return res.status(500).json({error: "Authentication failed", message: "authentication failed"})
 	}
 }
 

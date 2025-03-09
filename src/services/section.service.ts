@@ -119,10 +119,13 @@ export class SectionService {
 			}
 
 			// Check for duplicates (unless it's a repeatable section type)
-			const repeatableSections: SectionType[] = [SectionType.CONTENT]
+			const repeatableSections: SectionType[] = [SectionType.CONTENT, SectionType.TIMELINE]
 
 			// Allow multiple STANDINGS sections for HOW_IT_WORKS page
-			const isSpecialCase = page.type === PageType.HOW_IT_WORKS && type === SectionType.STANDINGS
+			// Allow multiple TIMELINE sections for NEWS page
+			const isSpecialCase =
+				(page.type === PageType.HOW_IT_WORKS && type === SectionType.STANDINGS) ||
+				(page.type === PageType.NEWS && type === SectionType.TIMELINE)
 
 			if (!repeatableSections.includes(type) && !isSpecialCase) {
 				const existingSection = page.sections.find((s) => s.type === type)

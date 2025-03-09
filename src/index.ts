@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit"
 import swaggerUi from "swagger-ui-express"
 import swaggerJsdoc from "swagger-jsdoc"
 import net from "net"
+import cookieParser from "cookie-parser"
 import CONFIG from "./config"
 import logger from "./utils/logger"
 import {initializeDatabase} from "./utils/db"
@@ -68,16 +69,6 @@ const isPortInUse = (port: number): Promise<boolean> => {
 	})
 }
 
-// Find next available port
-const findAvailablePort = async (startPort: number, maxAttempts: number = 10): Promise<number> => {
-	for (let i = 0; i < maxAttempts; i++) {
-		const port = startPort + i
-		const inUse = await isPortInUse(port)
-		if (!inUse) return port
-	}
-	throw new Error(`No available ports found after ${maxAttempts} attempts`)
-}
-
 // Swagger configuration
 const swaggerOptions = {
 	definition: {
@@ -102,6 +93,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions)
 // Basic middleware
 app.use(express.json())
 app.use(express.urlencoded({extended: true}))
+app.use(cookieParser())
 app.use(requestLogger)
 
 // Security middleware with specific CSP for Swagger UI
@@ -144,11 +136,27 @@ app.use(compression())
 
 // Request logging
 app.use(
-	morgan("combined", {
-		stream: {
-			write: (message) => logger.info(message.trim()),
+	morgan(
+		function (tokens, req, res) {
+			return [
+				"API REQUEST:",
+				tokens.method(req, res),
+				tokens.url(req, res),
+				tokens.status(req, res),
+				tokens["response-time"](req, res),
+				"ms",
+				"- IP:",
+				req.ip,
+				"- User-Agent:",
+				req.headers["user-agent"],
+			].join(" ")
 		},
-	})
+		{
+			stream: {
+				write: (message) => logger.debug(message.trim()),
+			},
+		}
+	)
 )
 
 // Rate limiting
@@ -156,6 +164,16 @@ app.use(
 	rateLimit({
 		windowMs: CONFIG.RATE_LIMIT.WINDOW_MS,
 		max: CONFIG.RATE_LIMIT.MAX_REQUESTS,
+		skip: (req) => {
+			// Skip rate limiting for authenticated requests
+			return !!req.headers.authorization
+		},
+		message: {
+			error: "Too many requests, please try again later.",
+			message: "Too many requests, please try again later.",
+		},
+		standardHeaders: true,
+		legacyHeaders: false,
 	})
 )
 
@@ -231,17 +249,16 @@ async function startServer() {
 			logger.warn("Email service connection failed - emails will not be sent")
 		}
 
-		// Find available port
-		const port = await findAvailablePort(CONFIG.PORT)
-		if (port !== CONFIG.PORT) {
-			logger.warn(`Port ${CONFIG.PORT} was in use, using port ${port} instead`)
-		}
-
 		// Start the server
-		server = app.listen(port, () => {
-			logger.info(`Server running in ${CONFIG.NODE_ENV} mode on port ${port}`)
+		server = app.listen(CONFIG.PORT, () => {
+			logger.info(`Server running in ${CONFIG.NODE_ENV} mode on port ${CONFIG.PORT}`)
 			logger.info("Email service status:", emailStatus ? "connected" : "disconnected")
 			logger.info("API Documentation available at: /api-docs")
+
+			// Test log message to verify console output
+			console.log(`\n\n=== API SERVER STARTED ON PORT ${CONFIG.PORT} ===`)
+			console.log(`=== LOG_LEVEL: ${process.env.LOG_LEVEL || "debug"} ===`)
+			console.log(`=== ENVIRONMENT: ${CONFIG.NODE_ENV} ===\n\n`)
 		})
 
 		// Graceful shutdown
@@ -266,6 +283,25 @@ async function startServer() {
 		// Handle unhandled promise rejections
 		process.on("unhandledRejection", (err: Error) => {
 			logger.error("Unhandled Promise Rejection:", err)
+
+			// Check if this is an email service error
+			const errorMessage = err?.message || ""
+			if (
+				errorMessage.includes("Email service") ||
+				errorMessage.includes("SMTP") ||
+				errorMessage.includes("nodemailer") ||
+				(errorMessage.includes("ETIMEDOUT") && errorMessage.includes("465"))
+			) {
+				// Log critical error but don't shut down for email issues
+				logger.error(
+					"CRITICAL: Email service error detected in unhandled rejection. Service may be unavailable but application will continue running."
+				)
+
+				// Don't call gracefulShutdown for email-related errors
+				return
+			}
+
+			// For other unhandled rejections, proceed with graceful shutdown
 			gracefulShutdown("UNHANDLED_REJECTION")
 		})
 	} catch (error) {

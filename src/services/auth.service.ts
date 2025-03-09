@@ -54,10 +54,6 @@ export class AuthService {
 			throw new Error("Invalid credentials")
 		}
 
-		if (!user.email_verified) {
-			throw new Error("Email not verified")
-		}
-
 		return user
 	}
 

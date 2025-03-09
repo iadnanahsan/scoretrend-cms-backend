@@ -28,11 +28,25 @@ export interface BlogPost {
 	category_name: string
 	author_id: string
 	author_name: string
+	author_details?: {
+		id: string
+		name: string
+		email?: string
+		profile_image_url?: string
+		translations?: {
+			[language: string]: {
+				name: string
+				description?: string
+			}
+		}
+	}
 	status: BlogStatus
 	thumbnail_url?: string
 	cover_url?: string
 	view_count: number
 	reading_time?: number
+	comments_count: number
+	pending_comments_count?: number
 	translations: {
 		[language: string]: BlogPostTranslation
 	}
@@ -73,6 +87,7 @@ export interface CreateBlogPostRequest {
 	}
 	thumbnail_url?: string
 	cover_url?: string
+	status?: BlogStatus
 }
 
 export interface UpdateBlogPostRequest {
@@ -120,4 +135,5 @@ export interface BlogListFilters {
 	sort_by?: "created_at" | "view_count" | "reading_time"
 	sort_direction?: "asc" | "desc"
 	search?: string
+	include_pending_comments?: boolean
 }

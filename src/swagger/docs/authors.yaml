@@ -7,51 +7,162 @@ info:
         Authors can manage their own profile details that appear with their blog posts.
 
 paths:
+    /cms/authors/blog-authors:
+        get:
+            tags:
+                - Authors
+            summary: Get list of active blog authors
+            description: |
+                Retrieves a list of authors who have published at least one blog post.
+                This endpoint is designed for blog post filtering.
+
+                **Features:**
+                - Public endpoint (no authentication required)
+                - Returns only authors with blog posts
+                - Minimal data for efficient filtering
+                - Alphabetically sorted by name
+            responses:
+                "200":
+                    description: List of active blog authors
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: "#/components/schemas/BlogAuthor"
+                            example:
+                                - id: "123e4567-e89b-12d3-a456-426614174000"
+                                  user_id: "123e4567-e89b-12d3-a456-426614174001"
+                                  name: "John Doe"
+                                  profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
+                                - id: "223e4567-e89b-12d3-a456-426614174002"
+                                  user_id: "223e4567-e89b-12d3-a456-426614174003"
+                                  name: "Jane Smith"
+                                  profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile2.webp"
+                "429":
+                    description: Too many requests
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Too many requests"
+                                code: "RATE_LIMIT_EXCEEDED"
+                                details:
+                                    message: "Rate limit exceeded. Please try again later."
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: "Failed to get authors"
+                                message: "An unexpected error occurred"
+
     /cms/authors/me:
         get:
             tags:
                 - Authors
-            summary: Get current user's author details
+            summary: Get author details
             description: |
-                Retrieves the author details for the currently authenticated user.
+                Retrieves author details for the specified author ID or the currently authenticated user.
 
                 **Features:**
+                - Public endpoint (no authentication required)
                 - Profile information
                 - Multi-language support
                 - User information
-            security:
-                - BearerAuth: []
+
+                **Note:**
+                - Language parameter is required to specify which translation to retrieve
+                - If ID parameter is provided, returns public author details for that ID
+                - If authenticated, returns the current user's author details
+                - If neither ID nor authentication is provided, returns all authors
+                - Translations are returned as a record object with language codes as keys
+                - Profile image is shared across all language versions
+            security: [] # Public endpoint
             parameters:
                 - in: query
                   name: language
+                  required: true
                   schema:
                       type: string
                       enum: [en, it, pt, es]
-                  description: Filter translations by language
+                  description: Language code for the translation to retrieve
+                - in: query
+                  name: id
+                  required: false
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Optional author ID to retrieve (if not provided and not authenticated, returns all authors)
             responses:
                 "200":
                     description: Author details retrieved successfully
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/AuthorDetail"
+                                oneOf:
+                                    - $ref: "#/components/schemas/AuthorDetail"
+                                    - type: array
+                                      items:
+                                          $ref: "#/components/schemas/AuthorDetail"
+                            examples:
+                                singleAuthor:
+                                    summary: Single author response
+                                    value:
+                                        id: "123e4567-e89b-12d3-a456-426614174000"
+                                        user_id: "123e4567-e89b-12d3-a456-426614174001"
+                                        profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
+                                        translations:
+                                            en:
+                                                name: "John Doe"
+                                                description: "Sports analyst and writer"
+                                        created_at: "2025-02-13T14:00:00Z"
+                                        updated_at: "2025-02-13T14:00:00Z"
+                                        user:
+                                            id: "123e4567-e89b-12d3-a456-426614174001"
+                                            name: "John Doe"
+                                allAuthors:
+                                    summary: All authors response
+                                    value:
+                                        - id: "123e4567-e89b-12d3-a456-426614174000"
+                                          user_id: "123e4567-e89b-12d3-a456-426614174001"
+                                          profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
+                                          translations:
+                                              en:
+                                                  name: "John Doe"
+                                                  description: "Sports analyst and writer"
+                                          created_at: "2025-02-13T14:00:00Z"
+                                          updated_at: "2025-02-13T14:00:00Z"
+                                          user:
+                                              id: "123e4567-e89b-12d3-a456-426614174001"
+                                              name: "John Doe"
+                                        - id: "223e4567-e89b-12d3-a456-426614174002"
+                                          user_id: "223e4567-e89b-12d3-a456-426614174003"
+                                          profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile2.webp"
+                                          translations:
+                                              en:
+                                                  name: "Jane Smith"
+                                                  description: "Football expert"
+                                          created_at: "2025-02-14T14:00:00Z"
+                                          updated_at: "2025-02-14T14:00:00Z"
+                                          user:
+                                              id: "223e4567-e89b-12d3-a456-426614174003"
+                                              name: "Jane Smith"
+                "400":
+                    description: Validation error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                             example:
-                                id: "123e4567-e89b-12d3-a456-426614174000"
-                                user_id: "123e4567-e89b-12d3-a456-426614174001"
-                                profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
-                                translations:
-                                    en:
-                                        name: "John Doe"
-                                        description: "Sports analyst and writer"
-                                created_at: "2025-02-13T14:00:00Z"
-                                updated_at: "2025-02-13T14:00:00Z"
-                                user:
-                                    id: "123e4567-e89b-12d3-a456-426614174001"
-                                    name: "John Doe"
-                                    email: "john.doe@example.com"
-                                    role: "AUTHOR"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
+                                error: "Language parameter is required"
+                                code: "VALIDATION_ERROR"
+                                details:
+                                    message: "You must specify a language using the 'language' query parameter"
+                                    supported_languages: ["en", "it", "pt", "es"]
                 "404":
                     description: Author details not found
                     content:
@@ -62,7 +173,7 @@ paths:
                                 error: "Author details not found"
                                 code: "NOT_FOUND"
                                 details:
-                                    message: "You haven't set up your author details yet"
+                                    message: "Author details not found"
 
         put:
             tags:
@@ -72,27 +183,52 @@ paths:
                 Creates or updates author details for the currently authenticated user.
 
                 **Features:**
-                - Profile image management
-                - Multi-language support
-                - Translation management
+                - Profile image management (same across all languages)
+                - Language-specific translation updates
+                - Single endpoint for both creation and updates
 
-                **Edge Cases:**
-                - Returns 400 if validation fails
-                - Returns 401 if not authenticated
+                **Note:**
+                - Authentication is required
+                - Language parameter is required to specify which translation to update
+                - For new authors, name is required
+                - For existing authors, updates only the specified language translation
+                - Profile image is shared across all language versions
             security:
                 - BearerAuth: []
+            parameters:
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for the translation to update
             requestBody:
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/UpdateAuthorDetailRequest"
+                            type: object
+                            properties:
+                                profile_image_url:
+                                    type: string
+                                    format: uri
+                                    description: URL to the author's profile image (shared across all languages)
+                                name:
+                                    type: string
+                                    maxLength: 100
+                                    description: Author's name in the specified language
+                                description:
+                                    type: string
+                                    maxLength: 1000
+                                    description: Author's description in the specified language
+                                translations:
+                                    type: object
+                                    description: Optional translations in multiple languages (for backward compatibility)
                         example:
                             profile_image_url: "https://storage.googleapis.com/scoretrend/authors/profile.webp"
-                            translations:
-                                en:
-                                    name: "John Doe"
-                                    description: "Sports analyst and writer"
+                            name: "John Doe"
+                            description: "Sports analyst and writer with 10+ years of experience"
             responses:
                 "200":
                     description: Author details updated successfully
@@ -130,6 +266,14 @@ components:
                     type: object
                     additionalProperties:
                         $ref: "#/components/schemas/AuthorTranslation"
+                    description: Record of translations keyed by language code
+                    example:
+                        en:
+                            name: "John Doe"
+                            description: "Sports analyst and writer"
+                        it:
+                            name: "John Doe"
+                            description: "Analista sportivo e scrittore"
                 created_at:
                     type: string
                     format: date-time
@@ -173,6 +317,30 @@ components:
                     type: object
                     additionalProperties:
                         $ref: "#/components/schemas/AuthorTranslation"
+
+        BlogAuthor:
+            type: object
+            required:
+                - id
+                - user_id
+                - name
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                    description: Unique identifier for the author detail
+                user_id:
+                    type: string
+                    format: uuid
+                    description: Unique identifier for the user
+                name:
+                    type: string
+                    description: Author's display name
+                profile_image_url:
+                    type: string
+                    format: uri
+                    nullable: true
+                    description: URL to the author's profile image
 
         Error:
             type: object

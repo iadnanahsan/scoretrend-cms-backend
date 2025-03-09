@@ -61,8 +61,11 @@ paths:
 
     /cms/pages/{pageType}/translations/{lang}:
         get:
-            summary: Get page content in specific language
+            deprecated: true
+            summary: Get page content in specific language (DEPRECATED)
             description: |
+                **DEPRECATED: Use GET /cms/pages/{pageType}?language=xx instead**
+
                 Retrieves page content for a specific language.
                 This endpoint is publicly accessible.
 
@@ -117,17 +120,126 @@ paths:
                 "404":
                     $ref: "#/components/responses/NotFound"
 
-    /cms/pages/{pageId}/translations/{lang}:
+    /cms/pages/{pageId}:
         put:
-            summary: Update page translation
+            deprecated: true
+            summary: Update page translation (DEPRECATED)
             description: |
+                **DEPRECATED: Use PUT /cms/pages/{pageId}/seo?language=xx instead**
+
                 Updates page translation for a specific language.
                 Only accessible by administrators.
 
+                **Features:**
+                - Language-specific updates
+                - SEO data validation
+                - Alias validation and uniqueness check
+                - Alias sanitization (spaces to hyphens, lowercase, etc.)
+
                 **Edge Cases:**
                 - Returns 400 if validation fails
-                - Returns 404 if page not found
+                - Returns 400 if language parameter is missing
+                - Returns 400 if language code is invalid
+                - Returns 400 if alias is not unique
+                - Returns 401 if not authenticated
                 - Returns 403 if not admin
+                - Returns 404 if page not found
+            security:
+                - BearerAuth: []
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: pageId
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+                  description: Page ID
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - alias
+                                - seo_data
+                            properties:
+                                alias:
+                                    type: string
+                                    description: |
+                                        SEO-friendly URL path segment.
+                                        - Must be unique across all pages
+                                        - Max 50 characters
+                                        - Only alphanumeric characters, hyphens, and underscores allowed
+                                        - Spaces will be converted to hyphens
+                                        - Will be converted to lowercase
+                                    example: "about-us"
+                                seo_data:
+                                    $ref: "#/components/schemas/SEOData"
+                        example:
+                            alias: "about-us"
+                            seo_data:
+                                basics:
+                                    title: "About Us - ScoreTrend"
+                                    description: "Learn about ScoreTrend's mission and team"
+                                    canonical_url: "https://scoretrend.com/about"
+                                openGraph:
+                                    title: "About ScoreTrend"
+                                    description: "Your premier sports analytics platform"
+                                    type: "website"
+                                    image: "https://scoretrend.com/images/about-og.jpg"
+                                twitter:
+                                    card: "summary_large_image"
+                                    title: "About ScoreTrend"
+                                    description: "Your premier sports analytics platform"
+                                    image: "https://scoretrend.com/images/about-twitter.jpg"
+            responses:
+                "200":
+                    description: Page translation updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PageTranslation"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "401":
+                    $ref: "#/components/responses/Unauthorized"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+    /cms/pages/{pageId}/translations/{lang}:
+        put:
+            deprecated: true
+            summary: Update page translation with path parameter (DEPRECATED)
+            description: |
+                **DEPRECATED: Use PUT /cms/pages/{pageId}/seo?language=xx instead**
+
+                Updates page translation for a specific language.
+                Only accessible by administrators.
+
+                **Features:**
+                - Language-specific updates
+                - SEO data validation
+                - Alias validation and uniqueness check
+                - Alias sanitization (spaces to hyphens, lowercase, etc.)
+
+                **Edge Cases:**
+                - Returns 400 if validation fails
+                - Returns 400 if alias is not unique
+                - Returns 401 if not authenticated
+                - Returns 403 if not admin
+                - Returns 404 if page not found
             security:
                 - BearerAuth: []
             tags:
@@ -159,12 +271,36 @@ paths:
                             properties:
                                 alias:
                                     type: string
+                                    description: |
+                                        SEO-friendly URL path segment.
+                                        - Must be unique across all pages
+                                        - Max 50 characters
+                                        - Only alphanumeric characters, hyphens, and underscores allowed
+                                        - Spaces will be converted to hyphens
+                                        - Will be converted to lowercase
                                     example: "about-us"
                                 seo_data:
                                     $ref: "#/components/schemas/SEOData"
+                        example:
+                            alias: "about-us"
+                            seo_data:
+                                basics:
+                                    title: "About Us - ScoreTrend"
+                                    description: "Learn about ScoreTrend's mission and team"
+                                    canonical_url: "https://scoretrend.com/about"
+                                openGraph:
+                                    title: "About ScoreTrend"
+                                    description: "Your premier sports analytics platform"
+                                    type: "website"
+                                    image: "https://scoretrend.com/images/about-og.jpg"
+                                twitter:
+                                    card: "summary_large_image"
+                                    title: "About ScoreTrend"
+                                    description: "Your premier sports analytics platform"
+                                    image: "https://scoretrend.com/images/about-twitter.jpg"
             responses:
                 "200":
-                    description: Translation updated successfully
+                    description: Page translation updated successfully
                     content:
                         application/json:
                             schema:
@@ -180,14 +316,15 @@ paths:
 
     /cms/pages/{pageId}/seo:
         get:
-            summary: Get page SEO data
+            summary: Get page SEO data and alias
             description: |
-                Retrieves SEO metadata for a specific page in the requested language.
+                Retrieves SEO metadata and alias for a specific page in the requested language.
                 This endpoint is publicly accessible.
 
                 **Key Features:**
                 - Public access (no authentication required)
                 - Language-specific SEO data
+                - Includes page alias
                 - Rate limiting applied
 
                 **Edge Cases:**
@@ -214,12 +351,20 @@ paths:
                   description: Language code for SEO data
             responses:
                 "200":
-                    description: SEO data retrieved successfully
+                    description: SEO data and alias retrieved successfully
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/SEOData"
+                                allOf:
+                                    - $ref: "#/components/schemas/SEOData"
+                                    - type: object
+                                      properties:
+                                          alias:
+                                              type: string
+                                              description: SEO-friendly URL path segment
+                                              example: "about-us"
                             example:
+                                alias: "about-us"
                                 basics:
                                     title: "About Us - ScoreTrend"
                                     description: "Learn about ScoreTrend's mission and team"
@@ -249,21 +394,24 @@ paths:
                 "404":
                     $ref: "#/components/responses/NotFound"
         put:
-            summary: Update page SEO data
+            summary: Update page SEO data and alias
             description: |
-                Updates SEO metadata for a specific page in the specified language.
+                Updates SEO metadata and alias for a specific page in the specified language.
 
                 **Features:**
                 - Language-specific SEO updates
                 - Meta tags validation
                 - OpenGraph data validation
                 - Twitter card validation
+                - Alias validation and uniqueness check
+                - Alias sanitization (spaces to hyphens, lowercase, etc.)
 
                 **Edge Cases:**
                 - Returns 400 if validation fails
                 - Returns 400 if language parameter is missing
                 - Returns 400 if language code is invalid
                 - Returns 400 if SEO data exceeds length limits
+                - Returns 400 if alias is not unique
                 - Returns 401 if not authenticated
                 - Returns 403 if not admin
                 - Returns 404 if page not found
@@ -292,8 +440,88 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/SEOData"
+                            type: object
+                            required:
+                                - basics
+                                - openGraph
+                                - twitter
+                            properties:
+                                alias:
+                                    type: string
+                                    description: |
+                                        SEO-friendly URL path segment.
+                                        - Must be unique across all pages
+                                        - Max 50 characters
+                                        - Only alphanumeric characters, hyphens, and underscores allowed
+                                        - Spaces will be converted to hyphens
+                                        - Will be converted to lowercase
+                                    example: "about-us"
+                                basics:
+                                    type: object
+                                    required:
+                                        - title
+                                        - description
+                                    properties:
+                                        title:
+                                            type: string
+                                            maxLength: 60
+                                            description: Page title (max 60 characters)
+                                        description:
+                                            type: string
+                                            maxLength: 160
+                                            description: Meta description (max 160 characters)
+                                        canonical_url:
+                                            type: string
+                                            format: uri
+                                            description: Canonical URL for this page
+                                openGraph:
+                                    type: object
+                                    required:
+                                        - title
+                                        - description
+                                        - type
+                                    properties:
+                                        title:
+                                            type: string
+                                            maxLength: 60
+                                            description: OpenGraph title
+                                        description:
+                                            type: string
+                                            maxLength: 160
+                                            description: OpenGraph description
+                                        type:
+                                            type: string
+                                            enum: [website, article]
+                                            description: OpenGraph type
+                                        image:
+                                            type: string
+                                            format: uri
+                                            description: OpenGraph image URL
+                                twitter:
+                                    type: object
+                                    required:
+                                        - card
+                                        - title
+                                        - description
+                                    properties:
+                                        card:
+                                            type: string
+                                            enum: [summary, summary_large_image]
+                                            description: Twitter card type
+                                        title:
+                                            type: string
+                                            maxLength: 60
+                                            description: Twitter title
+                                        description:
+                                            type: string
+                                            maxLength: 160
+                                            description: Twitter description
+                                        image:
+                                            type: string
+                                            format: uri
+                                            description: Twitter image URL
                         example:
+                            alias: "about-us"
                             basics:
                                 title: "About Us - ScoreTrend"
                                 description: "Learn about ScoreTrend's mission and team"
@@ -310,11 +538,11 @@ paths:
                                 image: "https://scoretrend.com/images/about-twitter.jpg"
             responses:
                 "200":
-                    description: SEO data updated successfully
+                    description: SEO data and alias updated successfully
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/SEOData"
+                                $ref: "#/components/schemas/PageTranslation"
                 "400":
                     $ref: "#/components/responses/ValidationError"
                 "401":
@@ -353,6 +581,178 @@ paths:
                     $ref: "#/components/responses/Unauthorized"
                 "403":
                     $ref: "#/components/responses/Forbidden"
+
+    /cms/pages/by-alias/{alias}:
+        get:
+            summary: Get page by alias
+            description: |
+                Retrieves page content by its SEO-friendly alias.
+                This endpoint is publicly accessible.
+
+                **Key Features:**
+                - Case-insensitive alias matching
+                - Public access (no authentication required)
+                - Includes translations and sections
+                - Language-specific content
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 400 if language parameter is missing
+                - Returns 404 if page not found
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - Pages
+            parameters:
+                - in: path
+                  name: alias
+                  required: true
+                  schema:
+                      type: string
+                  description: SEO-friendly URL alias of the page
+                - in: query
+                  name: language
+                  required: true
+                  schema:
+                      type: string
+                      enum: [en, it, pt, es]
+                  description: Language code for content filtering
+            responses:
+                "200":
+                    description: Page content retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Page"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "404":
+                    description: Page not found
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Page not found"
+                                    details:
+                                        type: object
+                                        properties:
+                                            alias:
+                                                type: string
+                                                example: "non-existent-alias"
+                                            message:
+                                                type: string
+                                                example: "No page exists with this alias"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+
+    /cms/pages/aliases:
+        get:
+            summary: Get all page aliases grouped by page
+            description: |
+                Retrieves a list of all pages with their translations and aliases grouped together.
+                This endpoint is publicly accessible and returns aliases for ALL languages.
+                No language parameter is required.
+
+                **Key Features:**
+                - Public access (no authentication required)
+                - Returns all page aliases across all languages
+                - Groups translations by page
+                - Includes page type information
+                - Useful for sitemap generation and URL validation
+                - Rate limiting applied
+
+                **Edge Cases:**
+                - Returns 429 if rate limit exceeded
+            security: [] # Remove security requirement for GET
+            tags:
+                - Pages
+            responses:
+                "200":
+                    description: List of all pages with their translations and aliases
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        page_id:
+                                            type: string
+                                            format: uuid
+                                            description: Page ID
+                                        page_type:
+                                            type: string
+                                            enum:
+                                                [
+                                                    HOME,
+                                                    ABOUT,
+                                                    HOW_IT_WORKS,
+                                                    CONTACT,
+                                                    FAQ,
+                                                    NEWS,
+                                                    PRIVACY_POLICY,
+                                                    COOKIE_POLICY,
+                                                ]
+                                            description: Type of the page
+                                        translations:
+                                            type: array
+                                            items:
+                                                type: object
+                                                properties:
+                                                    language:
+                                                        type: string
+                                                        enum: [en, it, pt, es]
+                                                        description: Language code
+                                                    alias:
+                                                        type: string
+                                                        description: SEO-friendly URL path segment
+                                                        example: "about-us"
+                            example:
+                                - page_id: "123e4567-e89b-12d3-a456-426614174000"
+                                  page_type: "HOME"
+                                  translations:
+                                      - language: "en"
+                                        alias: "home-en"
+                                      - language: "es"
+                                        alias: "home-es"
+                                - page_id: "123e4567-e89b-12d3-a456-426614174001"
+                                  page_type: "ABOUT"
+                                  translations:
+                                      - language: "en"
+                                        alias: "about-us"
+                                      - language: "it"
+                                        alias: "about-it"
+                "429":
+                    description: Too Many Requests
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Too many requests from this IP"
+                "500":
+                    description: Server error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: "Failed to get page aliases"
 
 components:
     schemas:
@@ -394,6 +794,15 @@ components:
                     enum: [en, it, pt, es]
                 alias:
                     type: string
+                    maxLength: 50
+                    description: |
+                        SEO-friendly URL path segment.
+                        - Must be unique across all pages
+                        - Max 50 characters
+                        - Only alphanumeric characters, hyphens, and underscores allowed
+                        - Spaces will be converted to hyphens
+                        - Will be converted to lowercase
+                    example: "about-us"
                 seo_data:
                     $ref: "#/components/schemas/SEOData"
                 created_at:

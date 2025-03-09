@@ -1,13 +1,11 @@
-import {AuthorDetail, AuthorDetailTranslation, Prisma} from "@prisma/client"
-import prisma from "../lib/prisma"
+import {PrismaClient, AuthorDetail} from "@prisma/client"
 import logger from "../utils/logger"
 import {LanguageService} from "./language.service"
-import {SupportedLanguage} from "../config/languages"
+import {SUPPORTED_LANGUAGES, SupportedLanguage} from "../config/languages"
+import {AuthorDetailWithUser, UpdateAuthorDetailInput, AuthorTranslation} from "../types/author.types"
+import {BadRequestError, NotFoundError} from "../utils/errors"
 
-export interface AuthorTranslation {
-	name: string
-	description?: string
-}
+const prisma = new PrismaClient()
 
 export interface CreateAuthorDetailData {
 	user_id: string
@@ -18,6 +16,13 @@ export interface CreateAuthorDetailData {
 export interface UpdateAuthorDetailData {
 	profile_image_url?: string
 	translations?: Record<string, AuthorTranslation>
+}
+
+export interface BlogAuthor {
+	id: string
+	user_id: string
+	name: string
+	profile_image_url?: string
 }
 
 export class AuthorService {
@@ -91,93 +96,294 @@ export class AuthorService {
 	/**
 	 * Get author detail by user ID with translations
 	 */
-	async getAuthorDetailByUserId(userId: string, language?: string): Promise<AuthorDetail | null> {
-		try {
-			const authorDetail = await prisma.authorDetail.findUnique({
-				where: {user_id: userId},
-				include: {
-					translations: language
-						? {
-								where: {language},
-						  }
-						: true,
-					user: {
-						select: {
-							id: true,
-							email: true,
-							name: true,
-							role: true,
-						},
+	async getAuthorDetailByUserId(userId: string, language: string): Promise<AuthorDetailWithUser | null> {
+		if (!LanguageService.isValidLanguage(language)) {
+			throw new BadRequestError(
+				`Invalid language code: ${language}. Supported languages: ${Object.keys(SUPPORTED_LANGUAGES).join(
+					", "
+				)}`
+			)
+		}
+
+		const authorDetail = await prisma.authorDetail.findUnique({
+			where: {user_id: userId},
+			include: {
+				translations: {
+					where: {language},
+				},
+				user: {
+					select: {
+						id: true,
+						name: true,
 					},
 				},
-			})
+			},
+		})
 
-			return authorDetail
-		} catch (error) {
-			logger.error("Error getting author detail by user ID:", error)
-			throw error
-		}
+		return authorDetail as AuthorDetailWithUser
 	}
 
 	/**
 	 * Update author detail with translations
 	 */
-	async updateAuthorDetail(id: string, data: UpdateAuthorDetailData): Promise<AuthorDetail> {
-		try {
-			// Validate languages if translations are provided
-			if (data.translations) {
-				Object.keys(data.translations).forEach((lang) => {
-					if (!LanguageService.isValidLanguage(lang)) {
-						throw new Error(`Invalid language code: ${lang}`)
-					}
-				})
+	async updateAuthorDetail(
+		userId: string,
+		data: UpdateAuthorDetailInput,
+		language: string
+	): Promise<AuthorDetailWithUser> {
+		if (!LanguageService.isValidLanguage(language)) {
+			throw new BadRequestError(
+				`Invalid language code: ${language}. Supported languages: ${Object.keys(SUPPORTED_LANGUAGES).join(
+					", "
+				)}`
+			)
+		}
+
+		// Check if user exists
+		const user = await prisma.user.findUnique({
+			where: {id: userId},
+		})
+
+		if (!user) {
+			throw new NotFoundError("User not found")
+		}
+
+		// Check if author detail exists
+		const existingAuthorDetail = await prisma.authorDetail.findUnique({
+			where: {user_id: userId},
+			include: {
+				translations: true,
+			},
+		})
+
+		if (existingAuthorDetail) {
+			// Update existing author detail
+			const updateData: any = {}
+
+			// Update profile image if provided
+			if (data.profile_image_url) {
+				updateData.profile_image_url = data.profile_image_url
 			}
 
-			// Get existing author detail
-			const existingAuthorDetail = await prisma.authorDetail.findUnique({
-				where: {id},
+			// Update translations for the specified language
+			if (data.name || data.description) {
+				// Find existing translation for this language
+				const existingTranslation = existingAuthorDetail.translations.find((t) => t.language === language)
+
+				if (existingTranslation) {
+					// Update existing translation
+					await prisma.authorDetailTranslation.update({
+						where: {
+							id: existingTranslation.id,
+						},
+						data: {
+							name: data.name || existingTranslation.name,
+							description: data.description || existingTranslation.description,
+						},
+					})
+				} else {
+					// Create new translation
+					await prisma.authorDetailTranslation.create({
+						data: {
+							author_detail_id: existingAuthorDetail.id,
+							language,
+							name: data.name || "",
+							description: data.description || "",
+						},
+					})
+				}
+			}
+
+			// If translations are provided in the old format, update them
+			if (data.translations) {
+				for (const [lang, trans] of Object.entries(data.translations)) {
+					const translation = trans as AuthorTranslation
+					if (!LanguageService.isValidLanguage(lang)) {
+						throw new BadRequestError(
+							`Invalid language code: ${lang}. Supported languages: ${Object.keys(
+								SUPPORTED_LANGUAGES
+							).join(", ")}`
+						)
+					}
+
+					// Find existing translation for this language
+					const existingTranslation = existingAuthorDetail.translations.find((t) => t.language === lang)
+
+					if (existingTranslation) {
+						// Update existing translation
+						await prisma.authorDetailTranslation.update({
+							where: {
+								id: existingTranslation.id,
+							},
+							data: {
+								name: translation.name,
+								description: translation.description || "",
+							},
+						})
+					} else {
+						// Create new translation
+						await prisma.authorDetailTranslation.create({
+							data: {
+								author_detail_id: existingAuthorDetail.id,
+								language: lang,
+								name: translation.name,
+								description: translation.description || "",
+							},
+						})
+					}
+				}
+			}
+
+			// Return updated author detail
+			const updatedAuthorDetail = await prisma.authorDetail.findUnique({
+				where: {id: existingAuthorDetail.id},
 				include: {
 					translations: true,
+					user: {
+						select: {
+							id: true,
+							name: true,
+						},
+					},
 				},
 			})
 
-			if (!existingAuthorDetail) {
-				throw new Error("Author detail not found")
+			return updatedAuthorDetail as AuthorDetailWithUser
+		} else {
+			// Create new author detail
+			// For new author details, name is required
+			if (!data.name && (!data.translations || !data.translations[language]?.name)) {
+				throw new BadRequestError("Name is required for creating new author details")
 			}
 
-			// Update author detail with translations
-			const authorDetail = await prisma.authorDetail.update({
-				where: {id},
+			// Prepare translations data
+			const translationsData = []
+
+			// Handle direct language fields
+			if (data.name) {
+				translationsData.push({
+					language,
+					name: data.name,
+					description: data.description || "",
+				})
+			}
+
+			// Add translations from the old format
+			if (data.translations) {
+				for (const [lang, trans] of Object.entries(data.translations)) {
+					const translation = trans as AuthorTranslation
+					if (!LanguageService.isValidLanguage(lang)) {
+						throw new BadRequestError(
+							`Invalid language code: ${lang}. Supported languages: ${Object.keys(
+								SUPPORTED_LANGUAGES
+							).join(", ")}`
+						)
+					}
+
+					// Skip if we already added this language
+					if (lang === language && data.name) continue
+
+					translationsData.push({
+						language: lang,
+						name: translation.name,
+						description: translation.description || "",
+					})
+				}
+			}
+
+			// Create author detail with translations
+			const newAuthorDetail = await prisma.authorDetail.create({
 				data: {
-					profile_image_url: data.profile_image_url,
-					translations: data.translations
-						? {
-								deleteMany: {},
-								create: Object.entries(data.translations).map(([language, translation]) => ({
-									language,
-									...translation,
-								})),
-						  }
-						: undefined,
+					user_id: userId,
+					profile_image_url: data.profile_image_url || null,
+					translations: {
+						create: translationsData,
+					},
 				},
 				include: {
 					translations: true,
 					user: {
 						select: {
 							id: true,
-							email: true,
 							name: true,
-							role: true,
 						},
 					},
 				},
 			})
 
-			return authorDetail
-		} catch (error) {
-			logger.error("Error updating author detail:", error)
-			throw error
+			return newAuthorDetail as AuthorDetailWithUser
 		}
+	}
+
+	/**
+	 * Update a specific language translation for an author
+	 */
+	async updateAuthorTranslation(
+		authorDetailId: string,
+		language: string,
+		translation: AuthorTranslation
+	): Promise<AuthorDetailWithUser> {
+		if (!LanguageService.isValidLanguage(language)) {
+			throw new BadRequestError(
+				`Invalid language code: ${language}. Supported languages: ${Object.keys(SUPPORTED_LANGUAGES).join(
+					", "
+				)}`
+			)
+		}
+
+		// Get existing author detail
+		const existingAuthorDetail = await prisma.authorDetail.findUnique({
+			where: {id: authorDetailId},
+			include: {
+				translations: true,
+			},
+		})
+
+		if (!existingAuthorDetail) {
+			throw new NotFoundError("Author detail not found")
+		}
+
+		// Find existing translation for this language
+		const existingTranslation = existingAuthorDetail.translations.find((t) => t.language === language)
+
+		if (existingTranslation) {
+			// Update existing translation
+			await prisma.authorDetailTranslation.update({
+				where: {
+					id: existingTranslation.id,
+				},
+				data: {
+					name: translation.name,
+					description: translation.description || "",
+				},
+			})
+		} else {
+			// Create new translation
+			await prisma.authorDetailTranslation.create({
+				data: {
+					author_detail_id: authorDetailId,
+					language,
+					name: translation.name,
+					description: translation.description || "",
+				},
+			})
+		}
+
+		// Return updated author detail
+		const updatedAuthorDetail = await prisma.authorDetail.findUnique({
+			where: {id: authorDetailId},
+			include: {
+				translations: true,
+				user: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
+		})
+
+		return updatedAuthorDetail as AuthorDetailWithUser
 	}
 
 	/**
@@ -238,4 +444,68 @@ export class AuthorService {
 			throw error
 		}
 	}
+
+	/**
+	 * Get list of authors who have at least one blog post
+	 * Simple implementation for blog filtering
+	 */
+	async getActiveBlogAuthors(): Promise<AuthorDetailWithUser[]> {
+		// Get all authors who have published at least one blog post
+		const authors = await prisma.$queryRaw`
+      SELECT DISTINCT 
+        ad.id, 
+        ad.user_id, 
+        ad.profile_image_url,
+        ad.created_at,
+        ad.updated_at,
+        json_build_object(
+          'id', u.id,
+          'name', u.name
+        ) as user
+      FROM "AuthorDetail" ad
+      JOIN "User" u ON ad.user_id = u.id
+      JOIN "BlogPost" bp ON u.id = bp.author_id
+      WHERE bp.status = 'PUBLISHED'
+      ORDER BY ad.created_at DESC
+    `
+
+		return authors as AuthorDetailWithUser[]
+	}
+
+	/**
+	 * Get all authors with translations for a specific language
+	 */
+	async getAllAuthors(language: string): Promise<AuthorDetailWithUser[]> {
+		if (!LanguageService.isValidLanguage(language)) {
+			throw new BadRequestError(
+				`Invalid language code: ${language}. Supported languages: ${Object.keys(SUPPORTED_LANGUAGES).join(
+					", "
+				)}`
+			)
+		}
+
+		// Get all authors with their translations for the specified language
+		const authors = await prisma.authorDetail.findMany({
+			include: {
+				translations: {
+					where: {
+						language,
+					},
+				},
+				user: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
+			orderBy: {
+				created_at: "desc",
+			},
+		})
+
+		return authors as AuthorDetailWithUser[]
+	}
 }
+
+export default new AuthorService()

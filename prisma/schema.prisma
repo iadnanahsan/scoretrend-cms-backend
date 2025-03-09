@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,87 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
-enum UserRole {
-  ADMIN
-  AUTHOR
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-}
-
-enum PageType {
-  HOME
-  ABOUT
-  HOW_IT_WORKS
-  CONTACT
-  FAQ
-  NEWS
-  PRIVACY_POLICY
-  COOKIE_POLICY
-  SYSTEM
-}
-
-enum SectionType {
-  HERO
-  CONTENT
-  HISTORY
-  TEAM
-  TIMELINE
-  SPORTS_CARD
-  MISSION
-  GRAPH_HOW
-  GRAPH_EXAMPLE
-  EVENTS
-  STATS_LIVE // Live match statistics section
-  STANDINGS
-  LINEUP
-  FAQ
-  CONTACT
-  FOOTER
-  BORN
-  OUR_STRENGTHS
-  FUTURE
-  DISCOVER
-  SCORETREND_WHAT // What Is ScoreTrend? section
-  TREND_OVERVIEW // Overview of Goal & Team Trends
-  GOAL_TREND // Goal Trend explanation
-  TEAM_TREND // Team Trend explanation
-  TABS_UNDER_GAMES // Match information tabs
-  EXPAND_EVENT // Expand event explanation section
-}
-
-enum BlogStatus {
-  DRAFT
-  PUBLISHED
-}
-
-enum CommentStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// Models
 model User {
-  id                   String        @id @default(uuid())
-  email                String        @unique
-  password             String
-  name                 String
-  role                 UserRole
-  status               UserStatus    @default(ACTIVE)
-  email_verified       Boolean       @default(false)
-  email_verified_at    DateTime?
-  verification_token   String?       @unique
-  verification_expires DateTime?
-  created_at           DateTime      @default(now())
-  updated_at           DateTime      @updatedAt
-  author_detail        AuthorDetail?
-  blog_posts           BlogPost[]
-  comments             Comment[]
-  updated_posts        BlogPost[]    @relation("UpdatedBy")
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password      String
+  name          String
+  role          UserRole
+  status        UserStatus    @default(ACTIVE)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  author_detail AuthorDetail?
+  blog_posts    BlogPost[]
+  updated_posts BlogPost[]    @relation("UpdatedBy")
+  comments      Comment[]
 }
 
 model Page {
@@ -143,8 +69,8 @@ model BlogCategory {
   id           String                @id @default(uuid())
   created_at   DateTime              @default(now())
   updated_at   DateTime              @updatedAt
-  translations CategoryTranslation[]
   posts        BlogPost[]
+  translations CategoryTranslation[]
 }
 
 model CategoryTranslation {
@@ -171,11 +97,11 @@ model BlogPost {
   created_at    DateTime          @default(now())
   updated_at    DateTime          @updatedAt
   updated_by_id String?
-  category      BlogCategory      @relation(fields: [category_id], references: [id])
   author        User              @relation(fields: [author_id], references: [id])
+  category      BlogCategory      @relation(fields: [category_id], references: [id])
   updated_by    User?             @relation("UpdatedBy", fields: [updated_by_id], references: [id])
-  translations  PostTranslation[] @relation("BlogPostTranslations")
   comments      Comment[]         @relation("PostComments")
+  translations  PostTranslation[] @relation("BlogPostTranslations")
 
   @@index([category_id])
   @@index([author_id])
@@ -190,7 +116,7 @@ model PostTranslation {
   post_id    String
   language   String   @db.VarChar(2)
   title      String
-  content    String   @db.Text
+  content    String
   alias      String
   seo_data   Json?
   created_at DateTime @default(now())
@@ -205,18 +131,16 @@ model Comment {
   id         String        @id @default(uuid())
   post_id    String
   user_id    String?
-  guest_name String?
-  content    String        @db.Text
   reply_to   String?
-  status     CommentStatus @default(PENDING)
+  content    String
+  status     CommentStatus @default(APPROVED)
   created_at DateTime      @default(now())
   updated_at DateTime      @updatedAt
-
-  // Relations
-  post    BlogPost  @relation("PostComments", fields: [post_id], references: [id], onDelete: Cascade)
-  user    User?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  replies Comment[] @relation("CommentReplies")
-  parent  Comment?  @relation("CommentReplies", fields: [reply_to], references: [id], onDelete: SetNull)
+  guest_name String?
+  post       BlogPost      @relation("PostComments", fields: [post_id], references: [id], onDelete: Cascade)
+  parent     Comment?      @relation("CommentReplies", fields: [reply_to], references: [id])
+  replies    Comment[]     @relation("CommentReplies")
+  user       User?         @relation(fields: [user_id], references: [id])
 
   @@index([post_id])
   @@index([user_id])
@@ -258,7 +182,7 @@ model FAQCategoryTranslation {
   category_id String
   language    String      @db.VarChar(2)
   name        String
-  description String?     @db.Text
+  description String?
   created_at  DateTime    @default(now())
   category    FAQCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
@@ -281,10 +205,73 @@ model FAQItemTranslation {
   id         String   @id @default(uuid())
   item_id    String
   language   String   @db.VarChar(2)
-  question   String   @db.Text
-  answer     String   @db.Text
+  question   String
+  answer     String
   created_at DateTime @default(now())
   item       FAQItem  @relation(fields: [item_id], references: [id], onDelete: Cascade)
 
   @@unique([item_id, language])
+}
+
+enum UserRole {
+  ADMIN
+  AUTHOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PageType {
+  HOME
+  ABOUT
+  HOW_IT_WORKS
+  CONTACT
+  FAQ
+  NEWS
+  PRIVACY_POLICY
+  COOKIE_POLICY
+  SYSTEM
+}
+
+enum SectionType {
+  HERO
+  CONTENT
+  HISTORY
+  TEAM
+  TIMELINE
+  SPORTS_CARD
+  MISSION
+  GRAPH_HOW
+  GRAPH_EXAMPLE
+  EVENTS
+  STATS_LIVE
+  STANDINGS
+  LINEUP
+  FAQ
+  CONTACT
+  FOOTER
+  BORN
+  OUR_STRENGTHS
+  FUTURE
+  DISCOVER
+  SCORETREND_WHAT
+  TREND_OVERVIEW
+  GOAL_TREND
+  TEAM_TREND
+  TABS_UNDER_GAMES
+  EXPAND_EVENT
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
 }

@@ -24,6 +24,9 @@ export class EmailService {
 	}
 	private isInitialized: boolean = false
 	private transporterOptions: SMTPTransport.Options
+	private serviceAvailable: boolean = true
+	private lastConnectionAttempt: number = 0
+	private readonly connectionRetryInterval: number = 5 * 60 * 1000 // 5 minutes
 
 	constructor() {
 		const port = Number(process.env.SMTP_PORT)
@@ -44,8 +47,8 @@ export class EmailService {
 				rejectUnauthorized: false, // Accept self-signed certificates
 				minVersion: "TLSv1.2", // Use modern TLS
 			},
-			debug: true,
-			logger: true,
+			debug: false,
+			logger: false,
 			// Increase timeouts for better reliability
 			connectionTimeout: 30000,
 			greetingTimeout: 30000,
@@ -59,11 +62,19 @@ export class EmailService {
 			tlsMinVersion: this.transporterOptions.tls?.minVersion,
 		})
 
-		this.initializeTransporter()
+		// Initialize transporter but don't crash if it fails
+		this.initializeTransporter().catch((error) => {
+			logger.error("Initial email service initialization failed:", error)
+			this.serviceAvailable = false
+			// Don't throw - allow application to continue
+		})
 	}
 
 	private async initializeTransporter() {
 		try {
+			// Update last connection attempt time
+			this.lastConnectionAttempt = Date.now()
+
 			// Close existing transporter if it exists
 			if (this.transporter) {
 				await this.closeTransporter()
@@ -81,11 +92,13 @@ export class EmailService {
 			await Promise.race([verifyPromise, timeoutPromise])
 
 			this.isInitialized = true
+			this.serviceAvailable = true
 			logger.info("Email service initialized successfully", {
 				host: this.transporterOptions.host,
 				port: this.transporterOptions.port,
 				secure: this.transporterOptions.secure,
 			})
+			return this.transporter
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error"
 			logger.error("Failed to initialize email service:", {
@@ -96,10 +109,14 @@ export class EmailService {
 				stack: error instanceof Error ? error.stack : undefined,
 			})
 			this.isInitialized = false
+			this.serviceAvailable = false
 			await this.closeTransporter()
 
-			// Throw error to be handled by retry mechanism
-			throw new Error(`Email service initialization failed: ${errorMessage}`)
+			// Log critical error but don't throw to prevent application crash
+			logger.error(`CRITICAL: Email service unavailable - ${errorMessage}`)
+
+			// Return null instead of throwing
+			return null
 		}
 	}
 
@@ -126,12 +143,28 @@ export class EmailService {
 		let lastError: Error | null = null
 		let delay = this.retryConfig.delay
 
+		// Check if we should attempt to reconnect
+		if (!this.serviceAvailable && Date.now() - this.lastConnectionAttempt > this.connectionRetryInterval) {
+			logger.info("Attempting to reconnect to email service after cooling period")
+			await this.initializeTransporter()
+		}
+
+		// If service is not available, fail fast with clear error
+		if (!this.serviceAvailable) {
+			throw new Error("Email service is currently unavailable. Operation cannot be completed.")
+		}
+
 		for (let attempt = 1; attempt <= this.retryConfig.attempts; attempt++) {
 			try {
 				// Always verify connection before sending
 				if (!this.isInitialized || !(await this.verifyConnection())) {
 					logger.info("Reinitializing email service before attempt", {attempt})
 					await this.initializeTransporter()
+
+					// If still not available after reinitialization attempt, fail fast
+					if (!this.serviceAvailable) {
+						throw new Error("Email service connection failed after reinitialization attempt")
+					}
 				}
 
 				// Attempt the operation
@@ -156,79 +189,123 @@ export class EmailService {
 			}
 		}
 
+		// After all retries failed, mark service as unavailable
+		this.serviceAvailable = false
+
+		// Log critical error
+		logger.error(
+			`CRITICAL: Email operation failed after ${this.retryConfig.attempts} attempts: ${lastError?.message}`
+		)
+
 		throw new Error(`${errorMessage} after ${this.retryConfig.attempts} attempts: ${lastError?.message}`)
 	}
 
 	public async verifyConnection(): Promise<boolean> {
 		try {
+			if (!this.transporter) {
+				return false
+			}
 			await this.transporter.verify()
+			this.serviceAvailable = true
 			return true
 		} catch (error) {
 			logger.error("Email service connection failed:", error)
+			this.serviceAvailable = false
 			return false
 		}
 	}
 
-	public async sendEmail({to, subject, html}: EmailOptions): Promise<void> {
-		await this.retryOperation(async () => {
-			const info = await this.transporter.sendMail({
-				from: process.env.SMTP_FROM,
-				to,
-				subject,
-				html,
-			})
-			logger.info("Email sent successfully", {
-				messageId: info.messageId,
-				response: info.response,
-				to,
-				subject,
-			})
-		}, "Failed to send email")
+	public isServiceAvailable(): boolean {
+		return this.serviceAvailable
 	}
 
-	public async sendWelcomeEmail(email: string, name: string): Promise<void> {
-		await this.retryOperation(async () => {
-			const info = await this.transporter.sendMail({
-				from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
-				to: email,
-				subject: "Welcome to ScoreTrend CMS",
-				html: `
+	public async sendEmail({to, subject, html}: EmailOptions): Promise<boolean> {
+		try {
+			await this.retryOperation(async () => {
+				const info = await this.transporter.sendMail({
+					from: process.env.SMTP_FROM,
+					to,
+					subject,
+					html,
+				})
+				logger.info("Email sent successfully", {
+					messageId: info.messageId,
+					response: info.response,
+					to,
+					subject,
+				})
+			}, "Failed to send email")
+			return true
+		} catch (error) {
+			logger.error(`Failed to send email to ${to}:`, error)
+			return false
+		}
+	}
+
+	public async sendWelcomeEmail(email: string, name: string): Promise<boolean> {
+		try {
+			await this.retryOperation(async () => {
+				const info = await this.transporter.sendMail({
+					from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
+					to: email,
+					subject: "Welcome to ScoreTrend CMS",
+					html: `
 						<h1>Welcome to ScoreTrend CMS</h1>
 						<p>Hello ${name},</p>
 						<p>Thank you for joining ScoreTrend CMS. Your account has been created successfully.</p>
 						<p>Best regards,<br>The ScoreTrend Team</p>
 					`,
-			})
-			logger.info("Welcome email sent successfully", {
-				messageId: info.messageId,
-				response: info.response,
-				to: email,
-			})
-		}, "Failed to send welcome email")
+				})
+				logger.info("Welcome email sent successfully", {
+					messageId: info.messageId,
+					response: info.response,
+					to: email,
+				})
+			}, "Failed to send welcome email")
+			return true
+		} catch (error) {
+			logger.error(`Failed to send welcome email to ${email}:`, error)
+			return false
+		}
 	}
 
-	public async sendPasswordResetEmail(email: string, name: string, token: string): Promise<void> {
-		await this.retryOperation(async () => {
-			const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`
-			const info = await this.transporter.sendMail({
-				from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
-				to: email,
-				subject: "Reset Your Password - ScoreTrend CMS",
-				html: `
+	public async sendPasswordResetEmail(email: string, name: string, token: string): Promise<boolean> {
+		try {
+			await this.retryOperation(async () => {
+				// Extract base URL from FRONTEND_URL to avoid path duplication
+				const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+				const resetPath = baseUrl.includes("/auth/")
+					? baseUrl // Already contains the path
+					: `${baseUrl}/auth/change-password`
+
+				// Construct the reset link with the token
+				const resetLink = `${resetPath}?token=${token}`
+
+				const info = await this.transporter.sendMail({
+					from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
+					to: email,
+					subject: "Reset Your Password - Scoretrend CMS",
+					html: `
 						<h1>Password Reset Request</h1>
 						<p>Hello ${name},</p>
 						<p>We received a request to reset your password. Click the link below to set a new password:</p>
 						<p><a href="${resetLink}">Reset Password</a></p>
 						<p>This link will expire in 1 hour.</p>
 						<p>If you didn't request this, please ignore this email.</p>
-						<p>Best regards,<br>The ScoreTrend Team</p>
+						<p>Best regards,<br>The Scoretrend Team</p>
 					`,
-			})
-			logger.info("Password reset email sent successfully", {
-				messageId: info.messageId,
-				response: info.response,
-				to: email,
-			})
-		}, "Failed to send password reset email")
+				})
+				logger.info("Password reset email sent successfully", {
+					messageId: info.messageId,
+					response: info.response,
+					to: email,
+					resetLink: resetLink, // Log the reset link for debugging
+				})
+			}, "Failed to send password reset email")
+			return true
+		} catch (error) {
+			logger.error(`Failed to send password reset email to ${email}:`, error)
+			return false
+		}
 	}
 }
